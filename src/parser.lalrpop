@@ -1,0 +1,296 @@
+use lalrpop_util::ParseError;
+use crate::tokens::*;
+use crate::ast::*;
+
+grammar;
+
+// straight from koka lol
+// handler[A | e1] {
+//   fn bar(a: A) { ..; resume(b); .. } -- type: (A, B -> R2/e) -> R2/e
+//   (r: R) -> R2/e { .. }
+//   finally { .. }
+// }
+
+pub Handler: EffectHandler = {
+    KeywordHandler <body:HandlerBody> => EffectHandler {
+        type_args: Vec::new(),
+        effect_args: Vec::new(),
+        handlers: body.1,
+        ret: body.0,
+        finally: body.2.unwrap_or(Vec::new()),
+    },
+    KeywordHandler "[" <tps:TypeEffectArgs> "]" <body:HandlerBody> => EffectHandler {
+        type_args: tps.0,
+        effect_args: tps.1,
+        handlers: body.1,
+        ret: body.0,
+        finally: body.2.unwrap_or(Vec::new()),
+    }
+}
+
+// [A -> B/e | e1 e2]
+TypeEffectArgs = {
+    Args<Type> => (<>, Vec::new()),
+    "|" <BaseType+> => (Vec::new(), <>),
+    <Args<Type>> "|" <BaseType*>,
+}
+
+HandlerBody = "{" <HandlerReturn?> <HandlerMember*> <HandlerFinally?> "}";
+
+HandlerMember = {
+    Func,
+}
+
+HandlerReturn: Func = <header:FuncParamList> <body:ClosureBlock> => Func {
+    header: FuncHeader {
+        name: Ident(String::new()),
+        type_params: Vec::new(),
+        effect_params: Vec::new(),
+        params: header.0,
+        effects: header.1,
+    },
+    body,
+};
+
+HandlerFinally = KeywordFinally <ClosureBlock>;
+
+pub EffectDef: Effect = {
+    KeywordEffect <name:Ident> <operators:EffectDefBody> => Effect { <>, type_params: Vec::new() },
+    KeywordEffect <name:Ident> "[" <type_params:Args<TypeParam>> "]" <operators:EffectDefBody> => Effect { <> },
+}
+
+EffectDefBody = "{" <FuncHeader*> "}";
+
+/// fn traverse[A / e](f: A -> B/e, xs: List[A]) -> List[B]/e
+pub Func: Func = <header:FuncHeader> <body:ClosureBlock> => Func { <> };
+
+FuncHeader: FuncHeader = {
+    KeywordFn <name:Ident> <ps:FuncParamList> => FuncHeader {
+        name,
+        type_params: Vec::new(),
+        effect_params: Vec::new(),
+        params: ps.0,
+        effects: ps.1,
+    },
+    KeywordFn <name:Ident> "[" <tps:TypeEffectParams> "]" <ps:FuncParamList> => FuncHeader {
+        name,
+        type_params: tps.0,
+        effect_params: tps.1,
+        params: ps.0,
+        effects: ps.1,
+    },
+}
+
+FuncParamList: (Vec<TypedIdent>, Effects) = {
+    /// (a: A, b: B, C/e2 ->)/e e2
+    "(" <Args<TypedIdent>> ")" <Effects>,
+    /// (a: A, b: B)/e -> C/e2
+    "(" <mut params:Args<TypedIdent>> ")" <mut effects:Effects> "->" <ret:ContinuationNoPostfix> => {
+        let (ret_params, ret_effects) = ret;
+        let cont_type = Type::Cont { params: ret_params, effects: ret_effects.clone() };
+        params.push(TypedIdent { name: Ident("k".to_owned()), typ: cont_type });
+        effects.0.extend(ret_effects.0);
+        (params, effects)
+    }
+}
+
+TypeEffectParams = {
+    Args<TypeParam> => (<>, Vec::new()),
+    "|" <EffectParam+> => (Vec::new(), <>),
+    <Args<TypeParam>> "|" <EffectParam*>,
+}
+
+TypeParam: TypeParam = <name:Ident> => TypeParam { <> };
+
+EffectParam: TypeParam = <name:Ident> => TypeParam { <> };
+
+TypedIdent: TypedIdent = <name:Ident> ":" <typ:Type> => TypedIdent { <> };
+
+pub Type: Type = {
+    BaseType => Type::Base(<>),
+    ClosureType,
+    Continuation => Type::Cont { params: <>.0, effects: <>.1 },
+    /// Function types: (A, B) -> C/e == (A, B, C/e ->)/e ->
+    <cont:Continuation> <ret:ContinuationNoPostfix> => {
+        let (mut params, mut effects) = cont;
+        let cont_type = Type::Cont { params: ret.0, effects: ret.1.clone() };
+        params.push(cont_type);
+        effects.0.extend(ret.1.0);
+        Type::Cont { params, effects }
+    },
+}
+
+/// A closure type { Foo[A] -> }/e
+ClosureType: Type = {
+    // {T}/e == () -> T/e == (T/e ->)/e ->
+    "{" <typ:Type> "}" <effects:Effects> => Type::Cont { params: vec![Type::Cont { params: vec![typ], effects: effects.clone() }], effects },
+}
+
+/// (A, B)/e ->
+Continuation: (Vec<Type>, Effects) = <ContinuationNoPostfix> "->";
+
+/// (A, B)/e
+ContinuationNoPostfix: (Vec<Type>, Effects) = FnArgTypeList Effects;
+
+FnArgTypeList: Vec<Type> = {
+    BaseType => vec![Type::Base(<>)],
+    "(" <Args<Type>> ")",
+}
+
+/// / e1 e2
+Effects: Effects = <effects:("/" <BaseType+>)?> => Effects(effects.unwrap_or(Vec::new()).into_iter().collect());
+
+BaseType: BaseType = {
+    Ident => BaseType::Simple(<>),
+    /// Generic types: Foo[P1, P2, P3]
+    <name:Ident> "[" <args:Args<Type>> "]" => BaseType::Ctor { name, args },
+}
+
+Statement: Statement = {
+    /// foo(x, y);
+    <Expr> ";" => Statement::Expr(<>),
+    /// let x: Int, y: List[Foo], z: (A, B) -> R/e = foo(t);
+    KeywordLet <bindings:Args<TypedIdent>> "=" <init:Expr> ";" => Statement::Let { <> },
+    /// return x, y, z;
+    KeywordReturn <Args<Expr>?> ";" => Statement::Return(<>.unwrap_or(Vec::new())),
+    /// x, y, z -> k;
+    <args:Args<Expr>?> "->" <cont:Expr> ";" => Statement::Continue { args: args.unwrap_or(Vec::new()), cont },
+}
+
+pub Expr: Expr = {
+    Binary,
+    Closure,
+    Handler => Expr::Handler(<>),
+    /// if cond { x }
+    KeywordIf <condition:Expr> <then_body:ClosureBlock> => Expr::IfThen { condition: Box::new(condition), then_body },
+    /// if cond { x } else { y }
+    KeywordIf <condition:Expr> <then_body:ClosureBlock> KeywordElse <else_body:ClosureBlock> => Expr::IfElse {
+        condition: Box::new(condition), then_body, else_body
+    },
+    /// with handler do { .. }
+    KeywordWith <handler:Expr> KeywordDo <stmts:ClosureBlock> => Expr::DoWith { handler: Box::new(handler), stmts },
+}
+
+Closure: Expr = {
+    /// Closure with no parameters: { let x = foo; f(x) }
+    <stmts:ClosureBlock> => Expr::Closure { params: Vec::new(), <> },
+    /// Closure with parameters: (x: X) { let y = f(x); g(y) }
+    "(" <params:Args<TypedIdent>> ")" <stmts:ClosureBlock> => Expr::Closure { <> },
+}
+
+ClosureBlock: Vec<Statement> = {
+    "{" <mut stmts:Statement*> <expr:Expr?> "}" => {
+        if let Some(expr) = expr {
+            stmts.push(Statement::Continue {
+                args: vec![expr],
+                cont: Expr::K,
+            });
+        }
+        stmts
+    }
+}
+
+Binary: Expr = {
+    <l:Expr> <o:AddOp> <r:Factor> => Expr::Call {
+        func: Box::new(Expr::Op(o)),
+        args: vec![l, r],
+    },
+    Factor,
+}
+
+Factor: Expr = {
+    <l:Factor> <o:MulOp> <r:Term> => Expr::Call {
+        func: Box::new(Expr::Op(o)),
+        args: vec![l, r],
+    },
+    Term,
+}
+
+Term: Expr = {
+    /// Implicit continuation
+    KeywordCC => Expr::K,
+    QualifiedIdent => Expr::Ident(<>),
+    Int => Expr::Int(<>),
+    /// Operator identifiers
+    "(" <AddOp> ")" => Expr::Op(<>),
+    "(" <MulOp> ")" => Expr::Op(<>),
+    /// Function call: f(p1, p2, p3)
+    <f:Term> "(" <ps:Args<Expr>> ")" => {
+        Expr::Call {
+            func: Box::new(f),
+            args: ps,
+        }
+    },
+    /// Resumption: resume(p1, p2, p3)
+    KeywordResume "(" <Args<Expr>> ")" => Expr::Resume(<>),
+    /// Member access: (foo).bar
+    <recv:Term> "." <member:Ident> => Expr::Member { recv: Box::new(recv), member },
+    /// Parenthesized expressions
+    "(" <Expr> ")"
+}
+
+pub QualifiedIdent: QualifiedIdent = {
+    <mut rest:(<Ident> "::")*> <last:Ident> => {
+        rest.push(last);
+        QualifiedIdent(rest)
+    }
+}
+
+pub Ident: Ident = {
+    r"[a-zA-Z_][a-zA-Z_0-9]*" => Ident(<>.to_owned()),
+}
+
+// Integer literals
+pub Int: IntLiteral = {
+    "0" => IntLiteral { value: 0, radix: IntRadix::Decimal },
+    r"[1-9][0-9]*" =>? Ok(IntLiteral {
+        value: i64::from_str_radix(<>, 10).map_err(|_| ParseError::User { error: "Integer literal too large" })?,
+        radix: IntRadix::Decimal,
+    }),
+    r"0x[0-9a-fA-F]+" =>? Ok(IntLiteral {
+        value: i64::from_str_radix(&<>[2..], 16).map_err(|_| ParseError::User { error: "Integer literal too large "})?,
+        radix: IntRadix::Hex,
+    }),
+    r"0c[0-7]+" =>? Ok(IntLiteral {
+        value: i64::from_str_radix(&<>[2..], 8).map_err(|_| ParseError::User { error: "Integer literal too large "})?,
+        radix: IntRadix::Octal,
+    }),
+    r"0b[01]+" =>? Ok(IntLiteral {
+        value: i64::from_str_radix(&<>[2..], 2).map_err(|_| ParseError::User { error: "Integer literal too large "})?,
+        radix: IntRadix::Binary,
+    })
+}
+
+AddOp: Operator = {
+    "+" => Operator::Add,
+    "-" => Operator::Sub,
+}
+
+MulOp: Operator = {
+    "*" => Operator::Mul,
+    "/" => Operator::Div,
+    "%" => Operator::Rem,
+}
+
+// keywords
+
+KeywordDo = "do";
+KeywordEffect = "effect";
+KeywordElse = "else";
+KeywordFinally = "finally";
+KeywordFn = "fn";
+KeywordHandler = "handler";
+KeywordIf = "if";
+KeywordCC = "k";
+KeywordLet = "let";
+KeywordResume = "resume";
+KeywordReturn = "return";
+KeywordWith = "with";
+
+/// A nonempty comma-delimited list.
+Args<T>: Vec<T> = {
+    <mut ps:(<T> ",")*> <p:T> => {
+        ps.push(p);
+        ps
+    }
+}
