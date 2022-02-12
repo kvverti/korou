@@ -252,7 +252,9 @@ mod tests {
                 },
                 Statement::Expr(Expr::IfElse {
                     condition: Box::new(Expr::Ident(QualifiedIdent::from("condition"))),
-                    then_body: vec![Statement::Return(vec![Expr::Ident(QualifiedIdent::from("x"))])],
+                    then_body: vec![Statement::Return(vec![Expr::Ident(QualifiedIdent::from(
+                        "x",
+                    ))])],
                     else_body: vec![Statement::Continue {
                         args: vec![Expr::Call {
                             func: Box::new(Expr::Op(Operator::Mul)),
@@ -263,6 +265,37 @@ mod tests {
                         }],
                         cont: Expr::K,
                     }],
+                }),
+            ],
+        };
+        let output = parser::ExprParser::new()
+            .parse(input)
+            .expect("Failed to parse");
+        assert_eq!(expected, output);
+    }
+
+    #[test]
+    fn blocklike_statements() {
+        let input = "{ {}; if x {}; if y {} else {}; }";
+        let empty = vec![Statement::Continue {
+            args: vec![],
+            cont: Expr::K,
+        }];
+        let expected = Expr::Closure {
+            params: vec![],
+            stmts: vec![
+                Statement::Expr(Expr::Closure {
+                    params: vec![],
+                    stmts: empty.clone(),
+                }),
+                Statement::Expr(Expr::IfThen {
+                    condition: Box::new(Expr::Ident(QualifiedIdent::from("x"))),
+                    then_body: empty.clone(),
+                }),
+                Statement::Expr(Expr::IfElse {
+                    condition: Box::new(Expr::Ident(QualifiedIdent::from("y"))),
+                    then_body: empty.clone(),
+                    else_body: empty,
                 }),
             ],
         };
@@ -316,7 +349,9 @@ mod tests {
                     BaseType::Simple(Ident::from("e2")),
                 ]),
             },
-            body: vec![Statement::Return(vec![Expr::Ident(QualifiedIdent::from("x"))])],
+            body: vec![Statement::Return(vec![Expr::Ident(QualifiedIdent::from(
+                "x",
+            ))])],
         };
         let output = parser::FuncParser::new()
             .parse(input)
@@ -338,7 +373,59 @@ mod tests {
                 }],
                 effects: Effects::from(vec![BaseType::Simple(Ident::from("e"))]),
             },
-            body: vec![Statement::Return(vec![Expr::Ident(QualifiedIdent::from("x"))])],
+            body: vec![Statement::Return(vec![Expr::Ident(QualifiedIdent::from(
+                "x",
+            ))])],
+        };
+        let output = parser::FuncParser::new()
+            .parse(input)
+            .expect("Failed to parse");
+        assert_eq!(expected, output);
+    }
+
+    #[test]
+    fn zero_arg_function() {
+        let input = "fn foo() -> Foo {}";
+        let expected = Func {
+            header: FuncHeader {
+                name: Ident::from("foo"),
+                type_params: vec![],
+                effect_params: vec![],
+                params: vec![TypedIdent {
+                    name: Ident::from("k"),
+                    typ: Type::Cont {
+                        params: vec![Type::Base(BaseType::Simple(Ident::from("Foo")))],
+                        effects: Effects(HashSet::new()),
+                    },
+                }],
+                effects: Effects(HashSet::new()),
+            },
+            body: vec![Statement::Continue {
+                args: vec![],
+                cont: Expr::K,
+            }],
+        };
+        let output = parser::FuncParser::new()
+            .parse(input)
+            .expect("Failed to parse");
+        assert_eq!(expected, output);
+    }
+
+    #[test]
+    fn zero_arg_continuation() {
+        let input = "fn foo() {}";
+        let expected = Func {
+            header: FuncHeader {
+                name: Ident::from("foo"),
+                type_params: vec![],
+                effect_params: vec![],
+                params: vec![],
+                effects: Effects(HashSet::new()),
+            },
+            body: vec![Statement::Continue {
+                args: vec![],
+                cont: Expr::K,
+            }],
         };
         let output = parser::FuncParser::new()
             .parse(input)
@@ -436,7 +523,10 @@ mod tests {
                         }],
                         effects: Effects(HashSet::new()),
                     },
-                    body: vec![],
+                    body: vec![Statement::Continue {
+                        args: vec![],
+                        cont: Expr::K,
+                    }],
                 },
                 Func {
                     header: FuncHeader {

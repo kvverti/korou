@@ -14,7 +14,6 @@
 //       define_symbol(optional_symbol_name, context_symbol_id)
 
 use std::collections::HashMap;
-use std::fmt::Formatter;
 
 pub mod fmt;
 
@@ -77,7 +76,11 @@ impl SymbolTable {
     }
 
     /// Resolve a qualified symbol directly inside the given context.
-    fn resolve_direct(&self, path_parts: &[impl AsRef<str>], context: SymbolKey) -> Option<SymbolKey> {
+    fn resolve_direct(
+        &self,
+        path_parts: &[impl AsRef<str>],
+        context: SymbolKey,
+    ) -> Option<SymbolKey> {
         let mut search_root = &self.nodes[context.0];
         let mut key = None;
         for path in path_parts {
@@ -125,16 +128,49 @@ mod tests {
         assert!(symbol_table.define("c", a_b).is_none());
         assert!(symbol_table.define("a", SymbolKey::ROOT).is_none());
 
-        assert_eq!(a, symbol_table.resolve(&["a"], SymbolKey::ROOT).expect("a/_"), "a/_");
-        assert_eq!(a_b, symbol_table.resolve(&["a", "b"], SymbolKey::ROOT).expect("a::b/_"), "a::b/_");
+        assert_eq!(
+            a,
+            symbol_table.resolve(&["a"], SymbolKey::ROOT).expect("a/_"),
+            "a/_"
+        );
+        assert_eq!(
+            a_b,
+            symbol_table
+                .resolve(&["a", "b"], SymbolKey::ROOT)
+                .expect("a::b/_"),
+            "a::b/_"
+        );
         assert_eq!(a_b, symbol_table.resolve(&["b"], a).expect("b/a"), "b/a");
-        assert_eq!(a_b_b, symbol_table.resolve(&["b"], a_b).expect("b/a::b"), "b/a::b");
-        assert_eq!(a_b_c, symbol_table.resolve(&["c"], a_b).expect("c/a::b"), "c/a::b");
+        assert_eq!(
+            a_b_b,
+            symbol_table.resolve(&["b"], a_b).expect("b/a::b"),
+            "b/a::b"
+        );
+        assert_eq!(
+            a_b_c,
+            symbol_table.resolve(&["c"], a_b).expect("c/a::b"),
+            "c/a::b"
+        );
         assert_eq!(a, symbol_table.resolve(&["a"], a).expect("a/a"), "a/a");
-        assert_eq!(a_b_a, symbol_table.resolve(&["a"], a_b).expect("a/a::b"), "a/a::b");
-        assert_eq!(a_b_b_c, symbol_table.resolve(&["b", "c"], a_b).expect("b::c/a::b"), "b::c/a::b");
-        assert_eq!(a_b_a, symbol_table.resolve(&["b", "a"], a_b).expect("b::a/a::b"), "b::a/a::b");
-        assert!(symbol_table.resolve(&["b"], SymbolKey::ROOT).is_none(), "b/_");
+        assert_eq!(
+            a_b_a,
+            symbol_table.resolve(&["a"], a_b).expect("a/a::b"),
+            "a/a::b"
+        );
+        assert_eq!(
+            a_b_b_c,
+            symbol_table.resolve(&["b", "c"], a_b).expect("b::c/a::b"),
+            "b::c/a::b"
+        );
+        assert_eq!(
+            a_b_a,
+            symbol_table.resolve(&["b", "a"], a_b).expect("b::a/a::b"),
+            "b::a/a::b"
+        );
+        assert!(
+            symbol_table.resolve(&["b"], SymbolKey::ROOT).is_none(),
+            "b/_"
+        );
         assert!(symbol_table.resolve(&["c"], a).is_none(), "c/a")
     }
 }

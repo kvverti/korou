@@ -52,7 +52,7 @@ HandlerReturn: Func = <header:FuncParamList> <body:ClosureBlock> => Func {
     body,
 };
 
-HandlerFinally = KeywordFinally <ClosureBlock>;
+HandlerFinally = KeywordFinally <FinallyBlock>;
 
 pub EffectDef: Effect = {
     KeywordEffect <name:Ident> <operators:EffectDefBody> => Effect { <>, type_params: Vec::new() },
@@ -83,11 +83,12 @@ FuncHeader: FuncHeader = {
 
 FuncParamList: (Vec<TypedIdent>, Effects) = {
     /// (a: A, b: B, C/e2 ->)/e e2
-    "(" <Args<TypedIdent>> ")" <Effects>,
+    "(" <params:Args<TypedIdent>?> ")" <effects:Effects> => (params.unwrap_or_default(), effects),
     /// (a: A, b: B)/e -> C/e2
-    "(" <mut params:Args<TypedIdent>> ")" <mut effects:Effects> "->" <ret:ContinuationNoPostfix> => {
+    "(" <params:Args<TypedIdent>?> ")" <mut effects:Effects> "->" <ret:ContinuationNoPostfix> => {
         let (ret_params, ret_effects) = ret;
         let cont_type = Type::Cont { params: ret_params, effects: ret_effects.clone() };
+        let mut params = params.unwrap_or_default();
         params.push(TypedIdent { name: Ident("k".to_owned()), typ: cont_type });
         effects.0.extend(ret_effects.0);
         (params, effects)
@@ -186,12 +187,20 @@ ClosureBlock: Vec<Statement> = {
                 cont: Expr::K,
             });
         }
+        if stmts.is_empty() {
+            stmts.push(Statement::Continue {
+                args: Vec::new(),
+                cont: Expr::K,
+            });
+        }
         stmts
     }
 }
 
+FinallyBlock: Vec<Statement> = "{" <Statement*> "}";
+
 Binary: Expr = {
-    <l:Expr> <o:AddOp> <r:Factor> => Expr::Call {
+    <l:Binary> <o:AddOp> <r:Factor> => Expr::Call {
         func: Box::new(Expr::Op(o)),
         args: vec![l, r],
     },
