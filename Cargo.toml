@@ -11,3 +11,4 @@ lalrpop = "0.19.6"
 [dependencies]
 lalrpop-util = { version = "0.19.6", features = ["lexer"] }
 regex = "1.5.4"
+bimap = "0.6.2"

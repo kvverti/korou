@@ -1,8 +1,9 @@
 use lalrpop_util::ParseError;
-use crate::tokens::*;
 use crate::ast::*;
+use crate::cache::StringCache;
+use crate::tokens::*;
 
-grammar;
+grammar(cache: &mut StringCache);
 
 // straight from koka lol
 // handler[A | e1] {
@@ -43,7 +44,7 @@ HandlerMember = {
 
 HandlerReturn: Func = <header:FuncParamList> <body:ClosureBlock> => Func {
     header: FuncHeader {
-        name: Ident(String::new()),
+        name: Ident(cache.intern("")),
         type_params: Vec::new(),
         effect_params: Vec::new(),
         params: header.0,
@@ -89,7 +90,7 @@ FuncParamList: (Vec<TypedIdent>, Effects) = {
         let (ret_params, ret_effects) = ret;
         let cont_type = Type::Cont { params: ret_params, effects: ret_effects.clone() };
         let mut params = params.unwrap_or_default();
-        params.push(TypedIdent { name: Ident("k".to_owned()), typ: cont_type });
+        params.push(TypedIdent { name: Ident(cache.intern("k")), typ: cont_type });
         effects.0.extend(ret_effects.0);
         (params, effects)
     }
@@ -246,7 +247,7 @@ pub QualifiedIdent: QualifiedIdent = {
 }
 
 pub Ident: Ident = {
-    r"[a-zA-Z_][a-zA-Z_0-9]*" => Ident(<>.to_owned()),
+    r"[a-zA-Z_][a-zA-Z_0-9]*" => Ident(cache.intern(<>)),
 }
 
 // Integer literals

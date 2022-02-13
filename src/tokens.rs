@@ -1,3 +1,5 @@
+use crate::cache::StringKey;
+
 /// The integer literal, which may be written in different radixes.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct IntLiteral {
@@ -15,20 +17,8 @@ pub enum IntRadix {
 }
 
 /// Identifier.
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub struct Ident(pub String);
-
-impl From<&str> for Ident {
-    fn from(v: &str) -> Self {
-        Self(v.to_owned())
-    }
-}
-
-impl AsRef<str> for Ident {
-    fn as_ref(&self) -> &str {
-        self.0.as_ref()
-    }
-}
+#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
+pub struct Ident(pub StringKey);
 
 /// Qualified identifier.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -40,9 +30,9 @@ impl From<Ident> for QualifiedIdent {
     }
 }
 
-impl From<&str> for QualifiedIdent {
-    fn from(v: &str) -> Self {
-        Self(vec![Ident::from(v)])
+impl From<StringKey> for QualifiedIdent {
+    fn from(v: StringKey) -> Self {
+        Self(vec![Ident(v)])
     }
 }
 

@@ -5,6 +5,8 @@ use std::fs::File;
 use std::io::Read;
 
 mod ast;
+mod block;
+mod cache;
 mod mir;
 mod symbol;
 mod tokens;

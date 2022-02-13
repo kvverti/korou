@@ -167,6 +167,7 @@ impl Hash for Effects {
 
 #[cfg(test)]
 mod tests {
+    use crate::cache::StringCache;
     use crate::parser;
     use crate::tokens::IntRadix;
 
@@ -174,6 +175,7 @@ mod tests {
 
     #[test]
     fn integers() {
+        let mut cache = StringCache::new();
         let inputs = ["34", "0xfe76c", "0c773", "0b11011"];
         let expected = [
             IntLiteral {
@@ -195,28 +197,35 @@ mod tests {
         ];
         let outputs = inputs
             .into_iter()
-            .map(|s| parser::IntParser::new().parse(s).expect("Failed to parse"))
+            .map(|s| {
+                parser::IntParser::new()
+                    .parse(&mut cache, s)
+                    .expect("Failed to parse")
+            })
             .collect::<Vec<_>>();
         assert_eq!(expected, outputs.as_slice());
     }
 
     #[test]
     fn expr() {
+        let mut cache = StringCache::new();
         let input = "resume(r) + (x * f(foo.z, 0x4c7))";
         let expected = Expr::Call {
             func: Box::new(Expr::Op(Operator::Add)),
             args: vec![
-                Expr::Resume(vec![Expr::Ident(QualifiedIdent::from("r"))]),
+                Expr::Resume(vec![Expr::Ident(QualifiedIdent::from(cache.intern("r")))]),
                 Expr::Call {
                     func: Box::new(Expr::Op(Operator::Mul)),
                     args: vec![
-                        Expr::Ident(QualifiedIdent::from("x")),
+                        Expr::Ident(QualifiedIdent::from(cache.intern("x"))),
                         Expr::Call {
-                            func: Box::new(Expr::Ident(QualifiedIdent::from("f"))),
+                            func: Box::new(Expr::Ident(QualifiedIdent::from(cache.intern("f")))),
                             args: vec![
                                 Expr::Member {
-                                    recv: Box::new(Expr::Ident(QualifiedIdent::from("foo"))),
-                                    member: Ident::from("z"),
+                                    recv: Box::new(Expr::Ident(QualifiedIdent::from(
+                                        cache.intern("foo"),
+                                    ))),
+                                    member: Ident(cache.intern("z")),
                                 },
                                 Expr::Int(IntLiteral {
                                     value: 0x4c7,
@@ -229,38 +238,41 @@ mod tests {
             ],
         };
         let output = parser::ExprParser::new()
-            .parse(input)
+            .parse(&mut cache, input)
             .expect("Failed to parse");
         assert_eq!(expected, output);
     }
 
     #[test]
     fn statements() {
+        let mut cache = StringCache::new();
         let input = "{ let x: Int = f(y); if condition { return x; } else { x * x -> k; }; }";
         let expected = Expr::Closure {
             params: vec![],
             stmts: vec![
                 Statement::Let {
                     bindings: vec![TypedIdent {
-                        name: Ident::from("x"),
-                        typ: Type::Base(BaseType::Simple(Ident::from("Int"))),
+                        name: Ident(cache.intern("x")),
+                        typ: Type::Base(BaseType::Simple(Ident(cache.intern("Int")))),
                     }],
                     init: Expr::Call {
-                        func: Box::new(Expr::Ident(QualifiedIdent::from("f"))),
-                        args: vec![Expr::Ident(QualifiedIdent::from("y"))],
+                        func: Box::new(Expr::Ident(QualifiedIdent::from(cache.intern("f")))),
+                        args: vec![Expr::Ident(QualifiedIdent::from(cache.intern("y")))],
                     },
                 },
                 Statement::Expr(Expr::IfElse {
-                    condition: Box::new(Expr::Ident(QualifiedIdent::from("condition"))),
+                    condition: Box::new(Expr::Ident(QualifiedIdent::from(
+                        cache.intern("condition"),
+                    ))),
                     then_body: vec![Statement::Return(vec![Expr::Ident(QualifiedIdent::from(
-                        "x",
+                        cache.intern("x"),
                     ))])],
                     else_body: vec![Statement::Continue {
                         args: vec![Expr::Call {
                             func: Box::new(Expr::Op(Operator::Mul)),
                             args: vec![
-                                Expr::Ident(QualifiedIdent::from("x")),
-                                Expr::Ident(QualifiedIdent::from("x")),
+                                Expr::Ident(QualifiedIdent::from(cache.intern("x"))),
+                                Expr::Ident(QualifiedIdent::from(cache.intern("x"))),
                             ],
                         }],
                         cont: Expr::K,
@@ -269,13 +281,14 @@ mod tests {
             ],
         };
         let output = parser::ExprParser::new()
-            .parse(input)
+            .parse(&mut cache, input)
             .expect("Failed to parse");
         assert_eq!(expected, output);
     }
 
     #[test]
     fn blocklike_statements() {
+        let mut cache = StringCache::new();
         let input = "{ {}; if x {}; if y {} else {}; }";
         let empty = vec![Statement::Continue {
             args: vec![],
@@ -289,112 +302,117 @@ mod tests {
                     stmts: empty.clone(),
                 }),
                 Statement::Expr(Expr::IfThen {
-                    condition: Box::new(Expr::Ident(QualifiedIdent::from("x"))),
+                    condition: Box::new(Expr::Ident(QualifiedIdent::from(cache.intern("x")))),
                     then_body: empty.clone(),
                 }),
                 Statement::Expr(Expr::IfElse {
-                    condition: Box::new(Expr::Ident(QualifiedIdent::from("y"))),
+                    condition: Box::new(Expr::Ident(QualifiedIdent::from(cache.intern("y")))),
                     then_body: empty.clone(),
                     else_body: empty,
                 }),
             ],
         };
         let output = parser::ExprParser::new()
-            .parse(input)
+            .parse(&mut cache, input)
             .expect("Failed to parse");
         assert_eq!(expected, output);
     }
 
     #[test]
     fn function() {
+        let mut cache = StringCache::new();
         let input = "fn foo[T, U | e e2](x: T, y: U)/e -> T/e2 { return x; }";
         let expected = Func {
             header: FuncHeader {
-                name: Ident::from("foo"),
+                name: Ident(cache.intern("foo")),
                 type_params: vec![
                     TypeParam {
-                        name: Ident::from("T"),
+                        name: Ident(cache.intern("T")),
                     },
                     TypeParam {
-                        name: Ident::from("U"),
+                        name: Ident(cache.intern("U")),
                     },
                 ],
                 effect_params: vec![
                     TypeParam {
-                        name: Ident::from("e"),
+                        name: Ident(cache.intern("e")),
                     },
                     TypeParam {
-                        name: Ident::from("e2"),
+                        name: Ident(cache.intern("e2")),
                     },
                 ],
                 params: vec![
                     TypedIdent {
-                        name: Ident::from("x"),
-                        typ: Type::Base(BaseType::Simple(Ident::from("T"))),
+                        name: Ident(cache.intern("x")),
+                        typ: Type::Base(BaseType::Simple(Ident(cache.intern("T")))),
                     },
                     TypedIdent {
-                        name: Ident::from("y"),
-                        typ: Type::Base(BaseType::Simple(Ident::from("U"))),
+                        name: Ident(cache.intern("y")),
+                        typ: Type::Base(BaseType::Simple(Ident(cache.intern("U")))),
                     },
                     TypedIdent {
-                        name: Ident::from("k"),
+                        name: Ident(cache.intern("k")),
                         typ: Type::Cont {
-                            params: vec![Type::Base(BaseType::Simple(Ident::from("T")))],
-                            effects: Effects::from(vec![BaseType::Simple(Ident::from("e2"))]),
+                            params: vec![Type::Base(BaseType::Simple(Ident(cache.intern("T"))))],
+                            effects: Effects::from(vec![BaseType::Simple(Ident(
+                                cache.intern("e2"),
+                            ))]),
                         },
                     },
                 ],
                 effects: Effects::from(vec![
-                    BaseType::Simple(Ident::from("e")),
-                    BaseType::Simple(Ident::from("e2")),
+                    BaseType::Simple(Ident(cache.intern("e"))),
+                    BaseType::Simple(Ident(cache.intern("e2"))),
                 ]),
             },
             body: vec![Statement::Return(vec![Expr::Ident(QualifiedIdent::from(
-                "x",
+                cache.intern("x"),
             ))])],
         };
         let output = parser::FuncParser::new()
-            .parse(input)
+            .parse(&mut cache, input)
             .expect("Failed to parse");
         assert_eq!(expected, output);
     }
 
     #[test]
     fn function2() {
+        let mut cache = StringCache::new();
         let input = "fn foo(x: Bar)/e { return x; }";
         let expected = Func {
             header: FuncHeader {
-                name: Ident::from("foo"),
+                name: Ident(cache.intern("foo")),
                 type_params: vec![],
                 effect_params: vec![],
                 params: vec![TypedIdent {
-                    name: Ident::from("x"),
-                    typ: Type::Base(BaseType::Simple(Ident::from("Bar"))),
+                    name: Ident(cache.intern("x")),
+                    typ: Type::Base(BaseType::Simple(Ident(cache.intern("Bar")))),
                 }],
-                effects: Effects::from(vec![BaseType::Simple(Ident::from("e"))]),
+                effects: Effects::from(vec![BaseType::Simple(Ident(cache.intern("e")))]),
             },
             body: vec![Statement::Return(vec![Expr::Ident(QualifiedIdent::from(
-                "x",
+                cache.intern("x"),
             ))])],
         };
         let output = parser::FuncParser::new()
-            .parse(input)
+            .parse(&mut cache, input)
             .expect("Failed to parse");
         assert_eq!(expected, output);
     }
 
     #[test]
     fn zero_arg_function() {
+        let mut cache = StringCache::new();
         let input = "fn foo() -> Foo {}";
         let expected = Func {
             header: FuncHeader {
-                name: Ident::from("foo"),
+                name: Ident(cache.intern("foo")),
                 type_params: vec![],
                 effect_params: vec![],
                 params: vec![TypedIdent {
-                    name: Ident::from("k"),
+                    name: Ident(cache.intern("k")),
                     typ: Type::Cont {
-                        params: vec![Type::Base(BaseType::Simple(Ident::from("Foo")))],
+                        params: vec![Type::Base(BaseType::Simple(Ident(cache.intern("Foo"))))],
                         effects: Effects(HashSet::new()),
                     },
                 }],
@@ -406,17 +424,18 @@ mod tests {
             }],
         };
         let output = parser::FuncParser::new()
-            .parse(input)
+            .parse(&mut cache, input)
             .expect("Failed to parse");
         assert_eq!(expected, output);
     }
 
     #[test]
     fn zero_arg_continuation() {
+        let mut cache = StringCache::new();
         let input = "fn foo() {}";
         let expected = Func {
             header: FuncHeader {
-                name: Ident::from("foo"),
+                name: Ident(cache.intern("foo")),
                 type_params: vec![],
                 effect_params: vec![],
                 params: vec![],
@@ -428,69 +447,73 @@ mod tests {
             }],
         };
         let output = parser::FuncParser::new()
-            .parse(input)
+            .parse(&mut cache, input)
             .expect("Failed to parse");
         assert_eq!(expected, output);
     }
 
     #[test]
     fn typ() {
+        let mut cache = StringCache::new();
         let input = "(Foo[T]/e ->, Bar) -> Baz/e2";
         let expected = Type::Cont {
             params: vec![
                 Type::Cont {
                     params: vec![Type::Base(BaseType::Ctor {
-                        name: Ident::from("Foo"),
-                        args: vec![Type::Base(BaseType::Simple(Ident::from("T")))],
+                        name: Ident(cache.intern("Foo")),
+                        args: vec![Type::Base(BaseType::Simple(Ident(cache.intern("T"))))],
                     })],
-                    effects: Effects::from(vec![BaseType::Simple(Ident::from("e"))]),
+                    effects: Effects::from(vec![BaseType::Simple(Ident(cache.intern("e")))]),
                 },
-                Type::Base(BaseType::Simple(Ident::from("Bar"))),
+                Type::Base(BaseType::Simple(Ident(cache.intern("Bar")))),
                 Type::Cont {
-                    params: vec![Type::Base(BaseType::Simple(Ident::from("Baz")))],
-                    effects: Effects::from(vec![BaseType::Simple(Ident::from("e2"))]),
+                    params: vec![Type::Base(BaseType::Simple(Ident(cache.intern("Baz"))))],
+                    effects: Effects::from(vec![BaseType::Simple(Ident(cache.intern("e2")))]),
                 },
             ],
-            effects: Effects::from(vec![BaseType::Simple(Ident::from("e2"))]),
+            effects: Effects::from(vec![BaseType::Simple(Ident(cache.intern("e2")))]),
         };
         let output = parser::TypeParser::new()
-            .parse(input)
+            .parse(&mut cache, input)
             .expect("Failed to parse");
         assert_eq!(expected, output);
     }
 
     #[test]
     fn effect() {
+        let mut cache = StringCache::new();
         let input = "effect foo[T] { fn bar(x: T) fn baz(y: T) -> T }";
         let expected = Effect {
-            name: Ident::from("foo"),
+            name: Ident(cache.intern("foo")),
             type_params: vec![TypeParam {
-                name: Ident::from("T"),
+                name: Ident(cache.intern("T")),
             }],
             operators: vec![
                 FuncHeader {
-                    name: Ident::from("bar"),
+                    name: Ident(cache.intern("bar")),
                     type_params: vec![],
                     effect_params: vec![],
                     params: vec![TypedIdent {
-                        name: Ident::from("x"),
-                        typ: Type::Base(BaseType::Simple(Ident::from("T"))),
+                        name: Ident(cache.intern("x")),
+                        typ: Type::Base(BaseType::Simple(Ident(cache.intern("T")))),
                     }],
                     effects: Effects(HashSet::new()),
                 },
                 FuncHeader {
-                    name: Ident::from("baz"),
+                    name: Ident(cache.intern("baz")),
                     type_params: vec![],
                     effect_params: vec![],
                     params: vec![
                         TypedIdent {
-                            name: Ident::from("y"),
-                            typ: Type::Base(BaseType::Simple(Ident::from("T"))),
+                            name: Ident(cache.intern("y")),
+                            typ: Type::Base(BaseType::Simple(Ident(cache.intern("T")))),
                         },
                         TypedIdent {
-                            name: Ident::from("k"),
+                            name: Ident(cache.intern("k")),
                             typ: Type::Cont {
-                                params: vec![Type::Base(BaseType::Simple(Ident::from("T")))],
+                                params: vec![Type::Base(BaseType::Simple(Ident(
+                                    cache.intern("T"),
+                                )))],
                                 effects: Effects(HashSet::new()),
                             },
                         },
@@ -500,26 +523,27 @@ mod tests {
             ],
         };
         let output = parser::EffectDefParser::new()
-            .parse(input)
+            .parse(&mut cache, input)
             .expect("Failed to parse");
         assert_eq!(expected, output);
     }
 
     #[test]
     fn handler() {
+        let mut cache = StringCache::new();
         let input = "handler[Foo] { (x: T) -> T { x } fn bar(x: Foo) { } fn baz(x: Foo) -> Foo { resume(x); } finally {} }";
         let expected = EffectHandler {
-            type_args: vec![Type::Base(BaseType::Simple(Ident::from("Foo")))],
+            type_args: vec![Type::Base(BaseType::Simple(Ident(cache.intern("Foo"))))],
             effect_args: vec![],
             handlers: vec![
                 Func {
                     header: FuncHeader {
-                        name: Ident::from("bar"),
+                        name: Ident(cache.intern("bar")),
                         type_params: vec![],
                         effect_params: vec![],
                         params: vec![TypedIdent {
-                            name: Ident::from("x"),
-                            typ: Type::Base(BaseType::Simple(Ident::from("Foo"))),
+                            name: Ident(cache.intern("x")),
+                            typ: Type::Base(BaseType::Simple(Ident(cache.intern("Foo")))),
                         }],
                         effects: Effects(HashSet::new()),
                     },
@@ -530,18 +554,20 @@ mod tests {
                 },
                 Func {
                     header: FuncHeader {
-                        name: Ident::from("baz"),
+                        name: Ident(cache.intern("baz")),
                         type_params: vec![],
                         effect_params: vec![],
                         params: vec![
                             TypedIdent {
-                                name: Ident::from("x"),
-                                typ: Type::Base(BaseType::Simple(Ident::from("Foo"))),
+                                name: Ident(cache.intern("x")),
+                                typ: Type::Base(BaseType::Simple(Ident(cache.intern("Foo")))),
                             },
                             TypedIdent {
-                                name: Ident::from("k"),
+                                name: Ident(cache.intern("k")),
                                 typ: Type::Cont {
-                                    params: vec![Type::Base(BaseType::Simple(Ident::from("Foo")))],
+                                    params: vec![Type::Base(BaseType::Simple(Ident(
+                                        cache.intern("Foo"),
+                                    )))],
                                     effects: Effects(HashSet::new()),
                                 },
                             },
@@ -549,24 +575,26 @@ mod tests {
                         effects: Effects(HashSet::new()),
                     },
                     body: vec![Statement::Expr(Expr::Resume(vec![Expr::Ident(
-                        QualifiedIdent::from("x"),
+                        QualifiedIdent::from(cache.intern("x")),
                     )]))],
                 },
             ],
             ret: Some(Func {
                 header: FuncHeader {
-                    name: Ident::from(""),
+                    name: Ident(cache.intern("")),
                     type_params: vec![],
                     effect_params: vec![],
                     params: vec![
                         TypedIdent {
-                            name: Ident::from("x"),
-                            typ: Type::Base(BaseType::Simple(Ident::from("T"))),
+                            name: Ident(cache.intern("x")),
+                            typ: Type::Base(BaseType::Simple(Ident(cache.intern("T")))),
                         },
                         TypedIdent {
-                            name: Ident::from("k"),
+                            name: Ident(cache.intern("k")),
                             typ: Type::Cont {
-                                params: vec![Type::Base(BaseType::Simple(Ident::from("T")))],
+                                params: vec![Type::Base(BaseType::Simple(Ident(
+                                    cache.intern("T"),
+                                )))],
                                 effects: Effects(HashSet::new()),
                             },
                         },
@@ -574,14 +602,14 @@ mod tests {
                     effects: Effects(HashSet::new()),
                 },
                 body: vec![Statement::Continue {
-                    args: vec![Expr::Ident(QualifiedIdent::from("x"))],
+                    args: vec![Expr::Ident(QualifiedIdent::from(cache.intern("x")))],
                     cont: Expr::K,
                 }],
             }),
             finally: vec![],
         };
         let output = parser::HandlerParser::new()
-            .parse(input)
+            .parse(&mut cache, input)
             .expect("Failed to parse");
         assert_eq!(expected, output);
     }
