@@ -1,175 +1,27 @@
-use std::collections::hash_map::RandomState;
-use std::collections::HashSet;
-use std::hash::{BuildHasher, Hash, Hasher};
+//! AST
 
-use crate::tokens::{Ident, IntLiteral, Operator, QualifiedIdent};
+mod effect;
+mod expr;
+mod func;
+mod generic;
+mod handler;
+mod statement;
+mod types;
 
-/// Effect definition.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Effect {
-    pub name: Ident,
-    pub type_params: Vec<TypeParam>,
-    pub operators: Vec<FuncHeader>,
-}
-
-// effect foo {
-//   fn bar(a: A) -> B;
-// }
-// straight from koka lol
-// handler[A/e1] {
-//   bar(a: A) { ..; resume(b); .. } -- type: (A, B -> R2/e) -> R2/e
-//   (r: R) -> R2/e { .. }
-//   finally { .. }
-// }
-// must be polymorphic over e if stored in a variable..
-// todo: monomorphism restriction?
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct EffectHandler {
-    pub type_args: Vec<Type>,
-    pub effect_args: Vec<BaseType>,
-    pub handlers: Vec<Func>,
-    pub ret: Option<Func>,
-    pub finally: Vec<Statement>,
-}
-
-/// Functions.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Func {
-    pub header: FuncHeader,
-    pub body: Vec<Statement>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct FuncHeader {
-    pub name: Ident,
-    pub type_params: Vec<TypeParam>,
-    pub effect_params: Vec<TypeParam>,
-    pub params: Vec<TypedIdent>,
-    pub effects: Effects,
-}
-
-/// Type or effect parameter.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TypeParam {
-    pub name: Ident,
-}
-
-/// Function parameter.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TypedIdent {
-    pub name: Ident,
-    pub typ: Type,
-}
-
-/// Expressions.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Expr {
-    /// (Potentially) qualified identifier.
-    Ident(QualifiedIdent),
-    /// Simple integer literal.
-    Int(IntLiteral),
-    /// The implicit continuation, `k`.
-    K,
-    /// Explicit operator.
-    Op(Operator),
-    /// Member access.
-    Member {
-        recv: Box<Expr>,
-        member: Ident,
-    },
-    /// Function call.
-    Call {
-        /// The function expression.
-        func: Box<Expr>,
-        /// The arguments to the function.
-        args: Vec<Expr>,
-    },
-    /// Resumption
-    Resume(Vec<Expr>),
-    Closure {
-        params: Vec<TypedIdent>,
-        stmts: Vec<Statement>,
-    },
-    IfThen {
-        condition: Box<Expr>,
-        then_body: Vec<Statement>,
-    },
-    IfElse {
-        condition: Box<Expr>,
-        then_body: Vec<Statement>,
-        else_body: Vec<Statement>,
-    },
-    Handler(EffectHandler),
-    DoWith {
-        handler: Box<Expr>,
-        stmts: Vec<Statement>,
-    },
-}
-
-/// Statements in a closure
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Statement {
-    Expr(Expr),
-    Let {
-        bindings: Vec<TypedIdent>,
-        init: Expr,
-    },
-    Continue {
-        args: Vec<Expr>,
-        cont: Expr,
-    },
-    Return(Vec<Expr>),
-}
-
-/// Base types. These are types which may be attached to effects.
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub enum BaseType {
-    Simple(Ident),
-    Ctor { name: Ident, args: Vec<Type> },
-}
-
-/// Types. These may be the types of parameters to functions.
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub enum Type {
-    Base(BaseType),
-    /// A continuation accepts some number of parameters and performs some effects.
-    Cont {
-        params: Vec<Type>,
-        effects: Effects,
-    },
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Effects(pub HashSet<BaseType>);
-
-impl From<Vec<BaseType>> for Effects {
-    fn from(v: Vec<BaseType>) -> Self {
-        Self(v.into_iter().collect())
-    }
-}
-
-impl Hash for Effects {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        let build_hasher = RandomState::new();
-        state.write_u64(
-            self.0
-                .iter()
-                .map(|e| {
-                    let mut hasher = build_hasher.build_hasher();
-                    e.hash(&mut hasher);
-                    hasher.finish()
-                })
-                .sum(),
-        );
-    }
-}
+pub use effect::Effect;
+pub use expr::Expr;
+pub use func::{Func, FuncHeader};
+pub use generic::{Effects, TypeParam, TypedIdent};
+pub use handler::EffectHandler;
+pub use statement::Statement;
+pub use types::{BaseType, Type};
 
 #[cfg(test)]
 mod tests {
     use crate::cache::StringCache;
     use crate::parser;
-    use crate::tokens::IntRadix;
+    use crate::tokens::{Ident, IntLiteral, IntRadix, Operator, QualifiedIdent};
+    use std::collections::HashSet;
 
     use super::*;
 
@@ -531,8 +383,9 @@ mod tests {
     #[test]
     fn handler() {
         let mut cache = StringCache::new();
-        let input = "handler[Foo] { (x: T) -> T { x } fn bar(x: Foo) { } fn baz(x: Foo) -> Foo { resume(x); } finally {} }";
+        let input = "handle eff[Foo] { (x: T) -> T { x } fn bar(x: Foo) { } fn baz(x: Foo) -> Foo { resume(x); } finally {} }";
         let expected = EffectHandler {
+            effect_name: QualifiedIdent::from(cache.intern("eff")),
             type_args: vec![Type::Base(BaseType::Simple(Ident(cache.intern("Foo"))))],
             effect_args: vec![],
             handlers: vec![
