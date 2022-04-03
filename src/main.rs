@@ -10,6 +10,7 @@ mod cache;
 mod mir;
 mod span;
 mod symbol;
+mod token;
 mod tokenizer;
 mod tokens;
 
