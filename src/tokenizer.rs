@@ -1,6 +1,6 @@
 use crate::cache::StringKey;
 use crate::span::Span;
-use crate::token::Token;
+use crate::token::{Token, TokenKind};
 
 mod rules;
 
@@ -37,24 +37,33 @@ impl<'a> Tokenizer<'a> {
     }
 
     /// Gets the next token without advancing the tokenizer.
-    pub fn peek(&mut self) -> Option<Token> {
+    pub fn peek(&mut self) -> Token {
         self.consume_ws();
-        rules::RULES
+        let (kind, end) = rules::RULES
             .iter()
             .find_map(|&rule| rule(self.src))
-            .map(|(kind, end)| Token {
-                span: self.make_span(end),
-                value: kind,
-            })
+            .unwrap_or_else(|| rules::unrecognized_char(self.src));
+        Token {
+            span: self.make_span(end),
+            value: kind,
+        }
     }
 
     /// Gets the next token and advances the tokenizer.
-    pub fn next(&mut self) -> Option<Token> {
+    pub fn next(&mut self) -> Token {
         let tkn = self.peek();
-        if let Some(tkn) = tkn {
-            self.src = &self.src[tkn.span.len..];
-        }
+        self.src = &self.src[tkn.span.len..];
         tkn
+    }
+
+    /// Gets the next token, advances the tokenizer, and tests the token's kind against the given kind.
+    pub fn expect(&mut self, kind: TokenKind) -> Result<Token, Token> {
+        let tkn = self.next();
+        if tkn.value == kind {
+            Ok(tkn)
+        } else {
+            Err(tkn)
+        }
     }
 }
 
@@ -79,7 +88,7 @@ mod tests {
             },
             value: TokenKind::Do,
         };
-        assert_eq!(expected, tokenizer.next().expect("do"));
+        assert_eq!(expected, tokenizer.next());
 
         let expected = Token {
             span: Span {
@@ -89,7 +98,7 @@ mod tests {
             },
             value: TokenKind::Ident,
         };
-        assert_eq!(expected, tokenizer.next().expect("ident"));
+        assert_eq!(expected, tokenizer.next());
 
         let expected = Token {
             span: Span {
@@ -99,7 +108,7 @@ mod tests {
             },
             value: TokenKind::Number,
         };
-        assert_eq!(expected, tokenizer.next().expect("int1"));
+        assert_eq!(expected, tokenizer.next());
 
         let expected = Token {
             span: Span {
@@ -109,7 +118,7 @@ mod tests {
             },
             value: TokenKind::Number,
         };
-        assert_eq!(expected, tokenizer.next().expect("int2"));
+        assert_eq!(expected, tokenizer.next());
 
         let expected = Token {
             span: Span {
@@ -119,7 +128,7 @@ mod tests {
             },
             value: TokenKind::Number,
         };
-        assert_eq!(expected, tokenizer.next().expect("int3"));
+        assert_eq!(expected, tokenizer.next());
 
         let expected = Token {
             span: Span {
@@ -129,7 +138,7 @@ mod tests {
             },
             value: TokenKind::Comma,
         };
-        assert_eq!(expected, tokenizer.next().expect(", 1"));
+        assert_eq!(expected, tokenizer.next());
 
         let expected = Token {
             span: Span {
@@ -139,7 +148,7 @@ mod tests {
             },
             value: TokenKind::Number,
         };
-        assert_eq!(expected, tokenizer.next().expect("int4"));
+        assert_eq!(expected, tokenizer.next());
 
         let expected = Token {
             span: Span {
@@ -149,7 +158,7 @@ mod tests {
             },
             value: TokenKind::Comma,
         };
-        assert_eq!(expected, tokenizer.next().expect(", 2"));
+        assert_eq!(expected, tokenizer.next());
 
         let expected = Token {
             span: Span {
@@ -159,6 +168,83 @@ mod tests {
             },
             value: TokenKind::Number,
         };
-        assert_eq!(expected, tokenizer.next().expect("int5"));
+        assert_eq!(expected, tokenizer.next());
+
+        let expected = Token {
+            span: Span {
+                file: file_name,
+                pos: 25,
+                len: 0,
+            },
+            value: TokenKind::Eof,
+        };
+        assert_eq!(expected, tokenizer.next());
+    }
+
+    #[test]
+    fn nuanced_tokenizes() {
+        let mut cache = StringCache::new();
+        let file_name = cache.intern("mysource.ku");
+        let mut tokenizer = Tokenizer::from_parts(file_name, "  >= -> -\\>  ");
+
+        let expected = Token {
+            span: Span {
+                file: file_name,
+                pos: 2,
+                len: 2,
+            },
+            value: TokenKind::GtEquals,
+        };
+        assert_eq!(expected, tokenizer.next());
+
+        let expected = Token {
+            span: Span {
+                file: file_name,
+                pos: 5,
+                len: 2,
+            },
+            value: TokenKind::Arrow,
+        };
+        assert_eq!(expected, tokenizer.next());
+
+        let expected = Token {
+            span: Span {
+                file: file_name,
+                pos: 8,
+                len: 1,
+            },
+            value: TokenKind::Minus,
+        };
+        assert_eq!(expected, tokenizer.next());
+
+        let expected = Token {
+            span: Span {
+                file: file_name,
+                pos: 9,
+                len: 1,
+            },
+            value: TokenKind::Unrecognized,
+        };
+        assert_eq!(expected, tokenizer.next());
+
+        let expected = Token {
+            span: Span {
+                file: file_name,
+                pos: 10,
+                len: 1,
+            },
+            value: TokenKind::Gt,
+        };
+        assert_eq!(expected, tokenizer.next());
+
+        let expected = Token {
+            span: Span {
+                file: file_name,
+                pos: 13,
+                len: 0,
+            },
+            value: TokenKind::Eof,
+        };
+        assert_eq!(expected, tokenizer.next());
     }
 }

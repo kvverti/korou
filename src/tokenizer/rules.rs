@@ -13,6 +13,7 @@ static INTEGER: Lazy<Regex> = Lazy::new(|| Regex::new("^[1-9][0-9]*").expect("In
 
 /// All tokenizing rules. When more than one rule applies, the earliest rule is used.
 pub const RULES: &[fn(&str) -> Option<(TokenKind, usize)>] = &[
+    eof,
     width_two_punct,
     width_one_punct,
     base_prefix_number,
@@ -58,4 +59,17 @@ pub fn unprefixed_number(src: &str) -> Option<(TokenKind, usize)> {
         .map(|m| m.end())
         .or_else(|| src.starts_with("0").then(|| 1))
         .map(|e| (TokenKind::Number, e))
+}
+
+pub fn eof(src: &str) -> Option<(TokenKind, usize)> {
+    if src.is_empty() {
+        Some((TokenKind::Eof, 0))
+    } else {
+        None
+    }
+}
+
+pub fn unrecognized_char(src: &str) -> (TokenKind, usize) {
+    let end = src.char_indices().nth(1).map(|t| t.0).unwrap_or(src.len());
+    (TokenKind::Unrecognized, end)
 }

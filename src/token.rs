@@ -7,6 +7,9 @@ pub type Token = Spanned<TokenKind>;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum TokenKind {
+    // Meta
+    Eof,
+    Unrecognized,
     // Punctuation
     Arrow,
     Colon,
@@ -136,6 +139,8 @@ impl TokenKind {
             Self::With => "with",
             Self::Ident => "<ident>",
             Self::Number => "<number>",
+            Self::Eof => "<EOF>",
+            Self::Unrecognized => "<?>",
         }
     }
 }
