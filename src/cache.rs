@@ -12,6 +12,7 @@ impl StringKey {
     pub const EMPTY: Self = StringKey(0);
 }
 
+#[derive(Debug)]
 pub struct StringCache {
     strings: BiHashMap<StringKey, String>,
 }
@@ -21,9 +22,7 @@ impl StringCache {
     pub fn new() -> Self {
         let mut strings = BiHashMap::new();
         strings.insert(StringKey::EMPTY, String::new());
-        Self {
-            strings
-        }
+        Self { strings }
     }
 
     /// Retrieve the key for the given string. The key is unique to this cache.

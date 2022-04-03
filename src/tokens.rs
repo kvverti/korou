@@ -1,9 +1,9 @@
 use crate::cache::StringKey;
 
 /// The integer literal, which may be written in different radixes.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct IntLiteral {
-    pub value: i64,
+    pub value: String,
     pub radix: IntRadix,
 }
 

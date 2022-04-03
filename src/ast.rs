@@ -31,19 +31,19 @@ mod tests {
         let inputs = ["34", "0xfe76c", "0c773", "0b11011"];
         let expected = [
             IntLiteral {
-                value: 34,
+                value: "34".to_owned(),
                 radix: IntRadix::Decimal,
             },
             IntLiteral {
-                value: 0xfe76c,
+                value: "fe76c".to_owned(),
                 radix: IntRadix::Hex,
             },
             IntLiteral {
-                value: 0o773,
+                value: "773".to_owned(),
                 radix: IntRadix::Octal,
             },
             IntLiteral {
-                value: 0b11011,
+                value: "11011".to_owned(),
                 radix: IntRadix::Binary,
             },
         ];
@@ -80,7 +80,7 @@ mod tests {
                                     member: Ident(cache.intern("z")),
                                 },
                                 Expr::Int(IntLiteral {
-                                    value: 0x4c7,
+                                    value: "4c7".to_owned(),
                                     radix: IntRadix::Hex,
                                 }),
                             ],

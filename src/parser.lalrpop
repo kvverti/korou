@@ -1,4 +1,3 @@
-use lalrpop_util::ParseError;
 use crate::ast::*;
 use crate::cache::StringCache;
 use crate::tokens::*;
@@ -6,21 +5,25 @@ use crate::tokens::*;
 grammar(cache: &mut StringCache);
 
 // straight from koka lol
-// handler[A | e1] {
+// handle someEffect[A | e1] {
 //   fn bar(a: A) { ..; resume(b); .. } -- type: (A, B -> R2/e) -> R2/e
 //   (r: R) -> R2/e { .. }
 //   finally { .. }
 // }
 
+pub Import: QualifiedIdent = KeywordImport <QualifiedIdent>;
+
 pub Handler: EffectHandler = {
-    KeywordHandler <body:HandlerBody> => EffectHandler {
+    KeywordHandle <name:QualifiedIdent> <body:HandlerBody> => EffectHandler {
+        effect_name: name,
         type_args: Vec::new(),
         effect_args: Vec::new(),
         handlers: body.1,
         ret: body.0,
         finally: body.2.unwrap_or(Vec::new()),
     },
-    KeywordHandler "[" <tps:TypeEffectArgs> "]" <body:HandlerBody> => EffectHandler {
+    KeywordHandle <name:QualifiedIdent> "[" <tps:TypeEffectArgs> "]" <body:HandlerBody> => EffectHandler {
+        effect_name: name,
         type_args: tps.0,
         effect_args: tps.1,
         handlers: body.1,
@@ -252,21 +255,21 @@ pub Ident: Ident = {
 
 // Integer literals
 pub Int: IntLiteral = {
-    "0" => IntLiteral { value: 0, radix: IntRadix::Decimal },
+    "0" => IntLiteral { value: "0".to_owned(), radix: IntRadix::Decimal },
     r"[1-9][0-9]*" =>? Ok(IntLiteral {
-        value: i64::from_str_radix(<>, 10).map_err(|_| ParseError::User { error: "Integer literal too large" })?,
+        value: <>.to_owned(),
         radix: IntRadix::Decimal,
     }),
     r"0x[0-9a-fA-F]+" =>? Ok(IntLiteral {
-        value: i64::from_str_radix(&<>[2..], 16).map_err(|_| ParseError::User { error: "Integer literal too large "})?,
+        value: <>[2..].to_owned(),
         radix: IntRadix::Hex,
     }),
     r"0c[0-7]+" =>? Ok(IntLiteral {
-        value: i64::from_str_radix(&<>[2..], 8).map_err(|_| ParseError::User { error: "Integer literal too large "})?,
+        value: <>[2..].to_owned(),
         radix: IntRadix::Octal,
     }),
     r"0b[01]+" =>? Ok(IntLiteral {
-        value: i64::from_str_radix(&<>[2..], 2).map_err(|_| ParseError::User { error: "Integer literal too large "})?,
+        value: <>[2..].to_owned(),
         radix: IntRadix::Binary,
     })
 }
@@ -289,8 +292,9 @@ KeywordEffect = "effect";
 KeywordElse = "else";
 KeywordFinally = "finally";
 KeywordFn = "fn";
-KeywordHandler = "handler";
+KeywordHandle = "handle";
 KeywordIf = "if";
+KeywordImport = "import";
 KeywordCC = "k";
 KeywordLet = "let";
 KeywordResume = "resume";

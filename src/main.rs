@@ -8,7 +8,9 @@ mod ast;
 mod block;
 mod cache;
 mod mir;
+mod span;
 mod symbol;
+mod tokenizer;
 mod tokens;
 
 lalrpop_mod!(parser);
