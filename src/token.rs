@@ -50,6 +50,7 @@ pub enum TokenKind {
     With,
     // Data-carrying
     Number,
+    BasePrefixNumber,
     Ident,
 }
 
@@ -139,6 +140,7 @@ impl TokenKind {
             Self::With => "with",
             Self::Ident => "<ident>",
             Self::Number => "<number>",
+            Self::BasePrefixNumber => "0Z<number>",
             Self::Eof => "<EOF>",
             Self::Unrecognized => "<?>",
         }

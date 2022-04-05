@@ -5,6 +5,8 @@ mod expr;
 mod func;
 mod generic;
 mod handler;
+mod ident;
+mod number;
 mod statement;
 mod types;
 
@@ -13,6 +15,8 @@ pub use expr::Expr;
 pub use func::{Func, FuncHeader};
 pub use generic::{Effects, TypeParam, TypedIdent};
 pub use handler::EffectHandler;
+pub use ident::{Ident, QualifiedIdent};
+pub use number::Integer;
 pub use statement::Statement;
 pub use types::{BaseType, Type};
 

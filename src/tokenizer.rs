@@ -10,6 +10,8 @@ pub struct Tokenizer<'a> {
     file_name: StringKey,
     base: &'a str,
     src: &'a str,
+    /// Peeked token
+    next: Option<Token>,
 }
 
 impl<'a> Tokenizer<'a> {
@@ -19,6 +21,7 @@ impl<'a> Tokenizer<'a> {
             file_name,
             src,
             base: src,
+            next: None,
         }
     }
 
@@ -36,8 +39,7 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    /// Gets the next token without advancing the tokenizer.
-    pub fn peek(&mut self) -> Token {
+    fn next_token(&mut self) -> Token {
         self.consume_ws();
         let (kind, end) = rules::RULES
             .iter()
@@ -49,9 +51,18 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
+    /// Gets the next token without advancing the tokenizer.
+    pub fn peek(&mut self) -> Token {
+        if let Some(tkn) = self.next {
+            return tkn;
+        }
+        let tkn = self.next_token();
+        *self.next.insert(tkn)
+    }
+
     /// Gets the next token and advances the tokenizer.
     pub fn next(&mut self) -> Token {
-        let tkn = self.peek();
+        let tkn = self.next.take().unwrap_or_else(|| self.next_token());
         self.src = &self.src[tkn.span.len..];
         tkn
     }
@@ -64,6 +75,15 @@ impl<'a> Tokenizer<'a> {
         } else {
             Err(tkn)
         }
+    }
+
+    /// Gets the source corresponding to the given span.
+    /// # Panics
+    /// This function panics when the span does not correspond to the same source file,
+    /// or if the span represents an invalid range.
+    pub fn src_for(&self, span: Span) -> &str {
+        assert_eq!(span.file, self.file_name, "Span is not from the same file");
+        &self.base[span.pos..span.pos + span.len]
     }
 }
 
@@ -116,7 +136,7 @@ mod tests {
                 pos: 9,
                 len: 4,
             },
-            value: TokenKind::Number,
+            value: TokenKind::BasePrefixNumber,
         };
         assert_eq!(expected, tokenizer.next());
 
@@ -126,7 +146,7 @@ mod tests {
                 pos: 14,
                 len: 4,
             },
-            value: TokenKind::Number,
+            value: TokenKind::BasePrefixNumber,
         };
         assert_eq!(expected, tokenizer.next());
 
@@ -146,7 +166,7 @@ mod tests {
                 pos: 19,
                 len: 3,
             },
-            value: TokenKind::Number,
+            value: TokenKind::BasePrefixNumber,
         };
         assert_eq!(expected, tokenizer.next());
 
@@ -245,6 +265,47 @@ mod tests {
             },
             value: TokenKind::Eof,
         };
+        assert_eq!(expected, tokenizer.next());
+    }
+
+    #[test]
+    fn advances() {
+        let mut cache = StringCache::new();
+        let file_name = cache.intern("mysource.ku");
+        let mut tokenizer = Tokenizer::from_parts(file_name, "foo bar");
+
+        let expected = Token {
+            span: Span {
+                file: file_name,
+                pos: 0,
+                len: 3,
+            },
+            value: TokenKind::Ident,
+        };
+        assert_eq!(expected, tokenizer.next());
+
+        let expected = Token {
+            span: Span {
+                file: file_name,
+                pos: 4,
+                len: 3,
+            },
+            value: TokenKind::Ident,
+        };
+        assert_eq!(expected, tokenizer.peek());
+        assert_eq!(expected, tokenizer.peek());
+        assert_eq!(expected, tokenizer.next());
+
+        let expected = Token {
+            span: Span {
+                file: file_name,
+                pos: 7,
+                len: 0,
+            },
+            value: TokenKind::Eof,
+        };
+        assert_eq!(expected, tokenizer.peek());
+        assert_eq!(expected, tokenizer.next());
         assert_eq!(expected, tokenizer.next());
     }
 }

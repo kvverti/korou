@@ -50,7 +50,7 @@ pub fn ident(src: &str) -> Option<(TokenKind, usize)> {
 pub fn base_prefix_number(src: &str) -> Option<(TokenKind, usize)> {
     BASE_PREFIX_INTEGER
         .find(src)
-        .map(|m| (TokenKind::Number, m.end()))
+        .map(|m| (TokenKind::BasePrefixNumber, m.end()))
 }
 
 pub fn unprefixed_number(src: &str) -> Option<(TokenKind, usize)> {

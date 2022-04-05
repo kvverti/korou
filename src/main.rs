@@ -8,6 +8,7 @@ mod ast;
 mod block;
 mod cache;
 mod mir;
+mod parse;
 mod span;
 mod symbol;
 mod token;
