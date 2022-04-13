@@ -4,14 +4,14 @@ use std::num::IntErrorKind;
 
 use crate::ast::{Ident, Integer, QualifiedIdent};
 use crate::cache::StringCache;
-use crate::parse::error::{IntegerBase, ParseError};
+use crate::parse::diagnostic::Diagnostics;
+use crate::parse::error::{Diagnostic, IntegerBase, ParseError};
 use crate::span::Spanned;
 use crate::token::{Token, TokenKind};
 use crate::tokenizer::Tokenizer;
 
+mod diagnostic;
 mod error;
-
-pub type Result<T> = std::result::Result<T, ParseError>;
 
 // Atoms
 
@@ -26,41 +26,41 @@ impl<'a> Parser<'a> {
     }
 
     /// Advances to the next token and asserts its kind.
-    fn expect(&mut self, kind: TokenKind) -> Result<Token> {
+    fn expect(&mut self, kind: TokenKind, ds: &mut Diagnostics) -> Option<Token> {
         self.tz
             .expect(kind)
-            .map_err(|tkn| ParseError::UnexpectedToken {
-                tkn,
-                expected: kind,
+            .map_err(|tkn| {
+                ds.diagnostic(Diagnostic::Error(ParseError::UnexpectedToken {
+                    tkn,
+                    expected: kind,
+                }));
             })
+            .ok()
     }
 
-    /// Peeks at the next token and asserts its kind.
-    fn peek_expect(&mut self, kind: TokenKind) -> Result<Token> {
+    /// Peeks at the next token and tests its kind.
+    fn peek(&mut self, kind: TokenKind) -> Option<Token> {
         let tkn = self.tz.peek();
         if tkn.value == kind {
             self.tz.next();
-            Ok(tkn)
+            Some(tkn)
         } else {
-            Err(ParseError::UnexpectedToken {
-                tkn,
-                expected: kind,
-            })
+            None
         }
     }
 
     /// Parses an identifier from the next token.
-    fn ident(&mut self) -> Result<Spanned<Ident>> {
-        let t = self.expect(TokenKind::Ident)?;
+    fn ident(&mut self, ds: &mut Diagnostics) -> Option<Spanned<Ident>> {
+        let t = self.expect(TokenKind::Ident, ds)?;
         let key = self.cache.intern(self.tz.src_for(t.span));
-        Ok(Spanned {
+        Some(Spanned {
             span: t.span,
             value: Ident(key),
         })
     }
 
     /// Parses an integer from the next token.
-    fn integer(&mut self) -> Result<Spanned<Integer>> {
+    fn integer(&mut self, ds: &mut Diagnostics) -> Option<Spanned<Integer>> {
         let t = self.tz.next();
         let (src, radix) = match t.value {
             TokenKind::Number => (self.tz.src_for(t.span), IntegerBase::Decimal),
@@ -76,39 +76,44 @@ impl<'a> Parser<'a> {
                 (src, radix)
             }
             _ => {
-                return Err(ParseError::UnexpectedToken {
+                ds.diagnostic(Diagnostic::Error(ParseError::UnexpectedToken {
                     tkn: t,
                     expected: TokenKind::Number,
-                })
+                }));
+                return None;
             }
         };
-        let num = i64::from_str_radix(src, radix as u32).map_err(|err| match err.kind() {
-            IntErrorKind::PosOverflow => ParseError::IntTooLarge { span: t.span },
-            _ => ParseError::InvalidIntDigit {
-                span: t.span,
-                base: radix,
-            },
-        })?;
-        Ok(Spanned {
+        let num = i64::from_str_radix(src, radix as u32)
+            .map_err(|err| {
+                ds.diagnostic(Diagnostic::Error(match err.kind() {
+                    IntErrorKind::PosOverflow => ParseError::IntTooLarge { span: t.span },
+                    _ => ParseError::InvalidIntDigit {
+                        span: t.span,
+                        base: radix,
+                    },
+                }))
+            })
+            .ok()?;
+        Some(Spanned {
             span: t.span,
             value: Integer(num),
         })
     }
 
     /// Parses a qualified identifier from the next tokens.
-    fn qualified_ident(&mut self) -> Result<Spanned<QualifiedIdent>> {
+    fn qualified_ident(&mut self, ds: &mut Diagnostics) -> Option<Spanned<QualifiedIdent>> {
         let mut paths = Vec::new();
         let Spanned {
             mut span,
             value: id,
-        } = self.ident()?;
+        } = self.ident(ds)?;
         paths.push(id);
-        while let Ok(_) = self.peek_expect(TokenKind::Scope) {
-            let Spanned { span: s, value: id } = self.ident()?;
+        while let Some(_) = self.peek(TokenKind::Scope) {
+            let Spanned { span: s, value: id } = self.ident(ds)?;
             paths.push(id);
             span.expand(s);
         }
-        Ok(Spanned {
+        Some(Spanned {
             span,
             value: QualifiedIdent(paths),
         })
@@ -119,7 +124,8 @@ impl<'a> Parser<'a> {
 mod tests {
     use crate::ast::{Ident, Integer, QualifiedIdent};
     use crate::cache::StringCache;
-    use crate::parse::error::{IntegerBase, ParseError};
+    use crate::parse::diagnostic::Diagnostics;
+    use crate::parse::error::{Diagnostic, IntegerBase, ParseError};
     use crate::parse::Parser;
     use crate::span::{Span, Spanned};
     use crate::tokenizer::Tokenizer;
@@ -132,6 +138,7 @@ mod tests {
         let tokenizer = Tokenizer::from_parts(file_name, "hello 17 0xc3f 0c19");
         let mut parser = Parser::from_parts(tokenizer, &mut cache);
 
+        let mut diagnostics = Diagnostics::new();
         let expected = Spanned {
             span: Span {
                 file: file_name,
@@ -140,8 +147,11 @@ mod tests {
             },
             value: Ident(hello),
         };
-        assert_eq!(expected, parser.ident().expect("ident"));
+        let expected_diagnostics = Diagnostics::new();
+        assert_eq!(expected, parser.ident(&mut diagnostics).expect("ident"));
+        assert_eq!(expected_diagnostics, diagnostics);
 
+        let mut diagnostics = Diagnostics::new();
         let expected = Spanned {
             span: Span {
                 file: file_name,
@@ -150,8 +160,14 @@ mod tests {
             },
             value: Integer(17),
         };
-        assert_eq!(expected, parser.integer().expect("int1"));
+        let expected_diagnostics = Diagnostics::new();
+        assert_eq!(
+            expected,
+            parser.integer(&mut diagnostics).expect("integer1")
+        );
+        assert_eq!(expected_diagnostics, diagnostics);
 
+        let mut diagnostics = Diagnostics::new();
         let expected = Spanned {
             span: Span {
                 file: file_name,
@@ -160,17 +176,25 @@ mod tests {
             },
             value: Integer(0xc3f),
         };
-        assert_eq!(expected, parser.integer().expect("int2"));
+        let expected_diagnostics = Diagnostics::new();
+        assert_eq!(
+            expected,
+            parser.integer(&mut diagnostics).expect("integer2")
+        );
+        assert_eq!(expected_diagnostics, diagnostics);
 
-        let expected = ParseError::InvalidIntDigit {
-            span: Span {
-                file: file_name,
-                pos: 15,
-                len: 4,
-            },
-            base: IntegerBase::Octal,
-        };
-        assert_eq!(expected, parser.integer().err().expect("int error"));
+        let mut diagnostics = Diagnostics::new();
+        let expected_diagnostics =
+            Diagnostics::from_diagnostics(vec![Diagnostic::Error(ParseError::InvalidIntDigit {
+                span: Span {
+                    file: file_name,
+                    pos: 15,
+                    len: 4,
+                },
+                base: IntegerBase::Octal,
+            })]);
+        assert!(parser.integer(&mut diagnostics).is_none());
+        assert_eq!(expected_diagnostics, diagnostics);
     }
 
     #[test]
@@ -183,18 +207,17 @@ mod tests {
         let tokenizer = Tokenizer::from_parts(file_name, "foo::bar::baz");
         let mut parser = Parser::from_parts(tokenizer, &mut cache);
 
+        let mut diagnostics = Diagnostics::new();
         let expected = Spanned {
             span: Span {
                 file: file_name,
                 pos: 0,
                 len: 13,
             },
-            value: QualifiedIdent(vec![
-                Ident(foo_key),
-                Ident(bar_key),
-                Ident(baz_key),
-            ]),
+            value: QualifiedIdent(vec![Ident(foo_key), Ident(bar_key), Ident(baz_key)]),
         };
-        assert_eq!(expected, parser.qualified_ident().expect("qualified ident"));
+        let expected_diagnostics = Diagnostics::new();
+        assert_eq!(expected, parser.qualified_ident(&mut diagnostics).unwrap());
+        assert_eq!(expected_diagnostics, diagnostics);
     }
 }

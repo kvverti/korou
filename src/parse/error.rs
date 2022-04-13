@@ -4,6 +4,11 @@ use crate::span::Span;
 use crate::token::{Token, TokenKind};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum Diagnostic {
+    Error(ParseError),
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum IntegerBase {
     Decimal = 10,
     Octal = 8,
