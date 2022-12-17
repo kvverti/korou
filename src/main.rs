@@ -1,11 +1,12 @@
+#![allow(dead_code)]
+
 use lalrpop_util::lalrpop_mod;
-use std::env::{self};
+use std::env;
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
 
 mod ast;
-mod block;
 mod cache;
 mod mir;
 mod parse;

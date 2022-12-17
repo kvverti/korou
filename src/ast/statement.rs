@@ -12,5 +12,6 @@ pub enum Statement {
         args: Vec<Expr>,
         cont: Expr,
     },
+    #[deprecated] // return is now a continuation
     Return(Vec<Expr>),
 }

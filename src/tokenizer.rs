@@ -1,5 +1,5 @@
 use crate::cache::StringKey;
-use crate::span::Span;
+use crate::span::FileSpan;
 use crate::token::{Token, TokenKind};
 
 mod rules;
@@ -31,8 +31,8 @@ impl<'a> Tokenizer<'a> {
     }
 
     /// Constructs a span of the given number of bytes.
-    fn make_span(&self, offset: usize) -> Span {
-        Span {
+    fn make_span(&self, offset: usize) -> FileSpan {
+        FileSpan {
             file: self.file_name,
             pos: self.base.len() - self.src.len(),
             len: offset,
@@ -45,10 +45,7 @@ impl<'a> Tokenizer<'a> {
             .iter()
             .find_map(|&rule| rule(self.src))
             .unwrap_or_else(|| rules::unrecognized_char(self.src));
-        Token {
-            span: self.make_span(end),
-            value: kind,
-        }
+        Token::from_parts(self.make_span(end), kind)
     }
 
     /// Gets the next token without advancing the tokenizer.
@@ -63,14 +60,14 @@ impl<'a> Tokenizer<'a> {
     /// Gets the next token and advances the tokenizer.
     pub fn next(&mut self) -> Token {
         let tkn = self.next.take().unwrap_or_else(|| self.next_token());
-        self.src = &self.src[tkn.span.len..];
+        self.src = &self.src[Token::carry(tkn).len..];
         tkn
     }
 
     /// Gets the next token, advances the tokenizer, and tests the token's kind against the given kind.
     pub fn expect(&mut self, kind: TokenKind) -> Result<Token, Token> {
         let tkn = self.next();
-        if tkn.value == kind {
+        if *tkn == kind {
             Ok(tkn)
         } else {
             Err(tkn)
@@ -81,7 +78,7 @@ impl<'a> Tokenizer<'a> {
     /// # Panics
     /// This function panics when the span does not correspond to the same source file,
     /// or if the span represents an invalid range.
-    pub fn src_for(&self, span: Span) -> &str {
+    pub fn src_for(&self, span: FileSpan) -> &str {
         assert_eq!(span.file, self.file_name, "Span is not from the same file");
         &self.base[span.pos..span.pos + span.len]
     }
@@ -100,104 +97,104 @@ mod tests {
         let file_name = cache.intern("mysource.ku");
         let mut tokenizer = Tokenizer::from_parts(file_name, "do foo 3 0xc3 0b01,0c9, 0");
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 0,
                 len: 2,
             },
-            value: TokenKind::Do,
-        };
+            TokenKind::Do,
+        );
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 3,
                 len: 3,
             },
-            value: TokenKind::Ident,
-        };
+            TokenKind::Ident,
+        );
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 7,
                 len: 1,
             },
-            value: TokenKind::Number,
-        };
+            TokenKind::Number,
+        );
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 9,
                 len: 4,
             },
-            value: TokenKind::BasePrefixNumber,
-        };
+            TokenKind::BasePrefixNumber,
+        );
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 14,
                 len: 4,
             },
-            value: TokenKind::BasePrefixNumber,
-        };
+            TokenKind::BasePrefixNumber,
+        );
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 18,
                 len: 1,
             },
-            value: TokenKind::Comma,
-        };
+            TokenKind::Comma,
+        );
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 19,
                 len: 3,
             },
-            value: TokenKind::BasePrefixNumber,
-        };
+            TokenKind::BasePrefixNumber,
+        );
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 22,
                 len: 1,
             },
-            value: TokenKind::Comma,
-        };
+            TokenKind::Comma,
+        );
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 24,
                 len: 1,
             },
-            value: TokenKind::Number,
-        };
+            TokenKind::Number,
+        );
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 25,
                 len: 0,
             },
-            value: TokenKind::Eof,
-        };
+            TokenKind::Eof,
+        );
         assert_eq!(expected, tokenizer.next());
     }
 
@@ -207,64 +204,64 @@ mod tests {
         let file_name = cache.intern("mysource.ku");
         let mut tokenizer = Tokenizer::from_parts(file_name, "  >= -> -\\>  ");
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 2,
                 len: 2,
             },
-            value: TokenKind::GtEquals,
-        };
+            TokenKind::GtEquals,
+        );
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 5,
                 len: 2,
             },
-            value: TokenKind::Arrow,
-        };
+            TokenKind::Arrow,
+        );
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 8,
                 len: 1,
             },
-            value: TokenKind::Minus,
-        };
+            TokenKind::Minus,
+        );
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 9,
                 len: 1,
             },
-            value: TokenKind::Unrecognized,
-        };
+            TokenKind::Unrecognized,
+        );
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 10,
                 len: 1,
             },
-            value: TokenKind::Gt,
-        };
+            TokenKind::Gt,
+        );
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 13,
                 len: 0,
             },
-            value: TokenKind::Eof,
-        };
+            TokenKind::Eof,
+        );
         assert_eq!(expected, tokenizer.next());
     }
 
@@ -274,36 +271,36 @@ mod tests {
         let file_name = cache.intern("mysource.ku");
         let mut tokenizer = Tokenizer::from_parts(file_name, "foo bar");
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 0,
                 len: 3,
             },
-            value: TokenKind::Ident,
-        };
+            TokenKind::Ident,
+        );
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 4,
                 len: 3,
             },
-            value: TokenKind::Ident,
-        };
+            TokenKind::Ident,
+        );
         assert_eq!(expected, tokenizer.peek());
         assert_eq!(expected, tokenizer.peek());
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token {
-            span: Span {
+        let expected = Token::from_parts(
+            FileSpan {
                 file: file_name,
                 pos: 7,
                 len: 0,
             },
-            value: TokenKind::Eof,
-        };
+            TokenKind::Eof,
+        );
         assert_eq!(expected, tokenizer.peek());
         assert_eq!(expected, tokenizer.next());
         assert_eq!(expected, tokenizer.next());

@@ -1,9 +1,9 @@
 use std::fmt::{self, Display, Formatter};
 
-use crate::span::Spanned;
+use crate::span::FileSpanned;
 
 /// Type of tokens.
-pub type Token = Spanned<TokenKind>;
+pub type Token = FileSpanned<TokenKind>;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum TokenKind {
@@ -45,6 +45,7 @@ pub enum TokenKind {
     Import,
     CC,
     Let,
+    Recur,
     Resume,
     Return,
     With,
@@ -66,6 +67,7 @@ impl TokenKind {
         Self::Import,
         Self::CC,
         Self::Let,
+        Self::Recur,
         Self::Resume,
         Self::Return,
         Self::With,
@@ -135,6 +137,7 @@ impl TokenKind {
             Self::Import => "import",
             Self::CC => "k",
             Self::Let => "let",
+            Self::Recur => "recur",
             Self::Resume => "resume",
             Self::Return => "return",
             Self::With => "with",

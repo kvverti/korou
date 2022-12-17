@@ -25,6 +25,7 @@ pub enum Expr {
         args: Vec<Expr>,
     },
     /// Resumption
+    #[deprecated] // resume is now a function
     Resume(Vec<Expr>),
     Closure {
         params: Vec<TypedIdent>,

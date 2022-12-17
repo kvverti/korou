@@ -1,37 +1,31 @@
 //! Types relating to parser diagnostics.
 
-use crate::parse::error::Diagnostic;
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Diagnostics {
-    diagnostics: Vec<Diagnostic>,
+    errors: Vec<String>,
 }
 
 impl Diagnostics {
     pub const fn new() -> Self {
         Self {
-            diagnostics: Vec::new(),
+            errors: Vec::new(),
         }
     }
 
-    pub(crate) fn from_diagnostics(diagnostics: Vec<Diagnostic>) -> Self {
-        Self { diagnostics }
-    }
-
-    pub fn diagnostic(&mut self, diag: Diagnostic) {
-        self.diagnostics.push(diag);
+    pub fn error<'s>(&mut self, msg: impl Into<String>) {
+        self.errors.push(msg.into());
     }
 
     pub fn combine(&mut self, others: Self) {
-        self.diagnostics.extend(others.diagnostics);
+        self.errors.extend(others.errors);
     }
 }
 
 impl IntoIterator for Diagnostics {
-    type Item = Diagnostic;
-    type IntoIter = std::vec::IntoIter<Diagnostic>;
+    type Item = String;
+    type IntoIter = std::vec::IntoIter<String>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.diagnostics.into_iter()
+        self.errors.into_iter()
     }
 }
