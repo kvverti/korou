@@ -1,10 +1,8 @@
 #![allow(dead_code)]
 
-use lalrpop_util::lalrpop_mod;
-use std::env;
-use std::error::Error;
-use std::fs::File;
-use std::io::Read;
+use std::{error::Error, io::{stdin, stdout, Write}};
+
+use crate::{cache::StringCache, token::TokenKind, tokenizer::Tokenizer};
 
 mod ast;
 mod cache;
@@ -16,13 +14,25 @@ mod token;
 mod tokenizer;
 mod tokens;
 
-lalrpop_mod!(parser);
-
 fn main() -> Result<(), Box<dyn Error>> {
-    let source_name = env::args().skip(1).next().unwrap(); // well toss you too, Option<T>: !Termination
-    let mut source_file = File::open(source_name)?;
-    let mut source = String::new();
-    source_file.read_to_string(&mut source)?;
+    loop {
+        print!("> ");
+        stdout().flush()?;
+        let mut input = String::new();
+        stdin().read_line(&mut input)?;
+
+        if input.trim() == ":quit" {
+            break;
+        }
+
+        let mut cache = StringCache::new();
+        let file = cache.intern("repl.ku");
+        let mut tz = Tokenizer::from_parts(file, &input);
+        let tokens = std::iter::from_fn(|| Some(tz.next()))
+            .take_while(|&el| *el != TokenKind::Eof)
+            .collect::<Vec<_>>();
+        println!("{:?}", tokens);
+    }
     Ok(())
 }
 

@@ -1,6 +1,6 @@
 //! Types relating to parser diagnostics.
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Diagnostics {
     errors: Vec<String>,
 }

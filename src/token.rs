@@ -1,9 +1,9 @@
 use std::fmt::{self, Display, Formatter};
 
-use crate::span::FileSpanned;
+use crate::span::Spanned;
 
 /// Type of tokens.
-pub type Token = FileSpanned<TokenKind>;
+pub type Token = Spanned<TokenKind>;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum TokenKind {
@@ -56,7 +56,7 @@ pub enum TokenKind {
 }
 
 impl TokenKind {
-    pub const KEYWORDS: &'static [Self] = &[
+    pub const KEYWORDS: &[Self] = &[
         Self::Do,
         Self::Effect,
         Self::Else,
@@ -73,7 +73,7 @@ impl TokenKind {
         Self::With,
     ];
 
-    pub const WIDTH_TWO_PUNCT: &'static [Self] = &[
+    pub const WIDTH_TWO_PUNCT: &[Self] = &[
         Self::Arrow,
         Self::DoubleEquals,
         Self::GtEquals,
@@ -81,7 +81,7 @@ impl TokenKind {
         Self::Scope,
     ];
 
-    pub const WIDTH_ONE_PUNCT: &'static [Self] = &[
+    pub const WIDTH_ONE_PUNCT: &[Self] = &[
         Self::Colon,
         Self::Comma,
         Self::CurlyL,
@@ -100,6 +100,18 @@ impl TokenKind {
         Self::SquareL,
         Self::SquareR,
         Self::Star,
+    ];
+
+    /// The token kinds that are definitely not the next token in a full expression.
+    pub const EXPR_SEPARATORS: &[Self] = &[
+        Self::Eof,
+        Self::Unrecognized,
+        Self::Arrow,
+        Self::Comma,
+        Self::CurlyR,
+        Self::RoundR,
+        Self::Semi,
+        Self::SquareR,
     ];
 
     pub fn as_str(&self) -> &'static str {

@@ -1,20 +1,25 @@
 //! Contains the `Span` type which represents a range of source code.
 
-use std::ops::{Deref, DerefMut};
+use std::{ops::{Deref, DerefMut, Range}, fmt::Display};
 
-use crate::cache::StringKey;
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct FileSpan {
-    pub file: StringKey,
+/// A span of elements in some stream. Can be columns in source code or tokens.
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct Span {
     pub pos: usize,
     pub len: usize,
 }
 
-impl FileSpan {
+impl Span {
+    /// Creates a span of no elements.
+    pub const fn new() -> Self {
+        Self {
+            pos: 0,
+            len: 0,
+        }
+    }
+
     /// Extends this span to cover the range of the given span.
     pub fn expand(this: &mut Self, other: Self) {
-        assert_eq!(this.file, other.file);
         let pos = usize::min(this.pos, other.pos);
         let len = usize::max(this.pos + this.len, other.pos + other.len) - pos;
         this.pos = pos;
@@ -22,59 +27,52 @@ impl FileSpan {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct LocalSpan {
-    pub offset: usize,
-    pub len: usize,
-}
-
-impl LocalSpan {
-    /// Extends this span to cover the range of the given span.
-    pub fn expand(this: &mut Self, other: Self) {
-        let offset = usize::min(this.offset, other.offset);
-        let len = usize::max(this.offset + this.len, other.offset + other.len) - offset;
-        this.offset = offset;
-        this.len = len;
+impl Display for Span {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}..{}", self.pos, self.pos + self.len)
     }
 }
 
-/// A type representing a value that carries a local span.
-pub type LocalSpanned<T> = Carrying<LocalSpan, T>;
-
-/// A type representing a value that carries a file span.
-pub type FileSpanned<T> = Carrying<FileSpan, T>;
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct Carrying<C, T> {
-    carry: C,
-    value: T,
-}
-
-impl<C, T> Carrying<C, T> {
-    /// Constructs a `Carrying<C, T>` from its component values.
-    pub fn from_parts(carry: C, value: T) -> Self {
-        Self { carry, value }
-    }
-
-    /// Returns the carry and value.
-    pub fn into_parts(this: Self) -> (C, T) {
-        (this.carry, this.value)
-    }
-
-    /// Retrieves the carry value.
-    pub fn carry(this: Self) -> C {
-        this.carry
-    }
-
-    pub fn map<R>(this: Self, f: impl FnOnce(T) -> R) -> Carrying<C, R> {
-        Carrying {
-            carry: this.carry,
-            value: f(this.value),
+impl From<Range<usize>> for Span {
+    fn from(value: Range<usize>) -> Self {
+        Self {
+            pos: value.start,
+            len: value.end - value.start,
         }
     }
 }
 
-impl<C, T> Deref for Carrying<C, T> {
+impl From<usize> for Span {
+    fn from(value: usize) -> Self {
+        Self {
+            pos: value,
+            len: 1,
+        }
+    }
+}
+
+/// A value associated with a span. This can be used transparently where a value is required.
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct Spanned<T: ?Sized> {
+    span: Span,
+    value: T,
+}
+
+impl<T> Spanned<T> {
+    pub fn from_span_value(span: Span, value: T) -> Self {
+        Self { span, value }
+    }
+
+    pub fn into_span_value(self) -> (Span, T) {
+        (self.span, self.value)
+    }
+
+    pub fn span(this: &Self) -> Span {
+        this.span
+    }
+}
+
+impl<T: ?Sized> Deref for Spanned<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -82,7 +80,7 @@ impl<C, T> Deref for Carrying<C, T> {
     }
 }
 
-impl<C, T> DerefMut for Carrying<C, T> {
+impl<T: ?Sized> DerefMut for Spanned<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.value
     }
