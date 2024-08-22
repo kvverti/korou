@@ -3,16 +3,36 @@
 use crate::span::Span;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum DiagnosticType {
+pub enum DiagnosticKind {
     Error,
     Warn,
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum Code {
+    Unexpected,
+    IntegerTooLarge,
+    InvalidIntegerDigit,
+    InvalidIntegerBase,
+}
+
+impl Code {
+    pub fn kind(&self) -> DiagnosticKind {
+        use DiagnosticKind as K;
+        match *self {
+            Code::Unexpected => K::Error,
+            Code::IntegerTooLarge => K::Error,
+            Code::InvalidIntegerDigit => K::Error,
+            Code::InvalidIntegerBase => K::Error,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Diagnostic {
-    pub typ: DiagnosticType,
+    pub code: Code,
     pub span: Span,
-    pub msg: String,
+    pub context: String,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -27,12 +47,13 @@ impl Diagnostics {
         }
     }
 
-    pub fn error(&mut self, span: Span, msg: impl Into<String>) {
+    /// Adds a diagnostic with the given span and context.
+    pub fn add(&mut self, code: Code, span: Span, context: impl Into<String>) {
         self.diagnostics.push(Diagnostic {
-            typ: DiagnosticType::Error,
+            code,
             span,
-            msg: msg.into(),
-        });
+            context: context.into(),
+        })
     }
 
     pub fn combine(&mut self, others: Self) {
@@ -42,7 +63,7 @@ impl Diagnostics {
     pub fn has_errors(&self) -> bool {
         self.diagnostics
             .iter()
-            .any(|d| d.typ == DiagnosticType::Error)
+            .any(|d| d.code.kind() == DiagnosticKind::Error)
     }
 
     pub fn clear(&mut self) {

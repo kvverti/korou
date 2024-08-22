@@ -1,5 +1,4 @@
 use crate::{
-    diagnostic::Diagnostics,
     span::{Span, Spanned},
     token::TokenKind,
     tokens::QualifiedIdent,
@@ -37,7 +36,7 @@ use super::Parser;
 
 #[cfg(test)]
 mod tests {
-    use crate::{cache::StringCache, parse::declare_idents, tokenizer::Tokenizer};
+    use crate::{cache::StringCache, parse::declare_idents, tokenizer::Tokenizer, diagnostic::Diagnostics};
 
     use super::*;
 

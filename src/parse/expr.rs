@@ -1,6 +1,6 @@
-use crate::{ast::Expr, span::Spanned, token::TokenKind};
+use crate::{ast::Expr, diagnostic::Code, span::Spanned, token::TokenKind};
 
-use super::{Parser, combinators};
+use super::{combinators, Parser};
 
 impl<'a> Parser<'a> {
     /// Parses an expression that can be the operand of a binary expression.
@@ -29,7 +29,11 @@ impl<'a> Parser<'a> {
                 Some(Expr::Int(*int))
             }
             _ => {
-                self.ds.error(Spanned::span(&token), "Unexpected token");
+                self.ds.add(
+                    Code::Unexpected,
+                    Spanned::span(&token),
+                    format!("{:?}", *token),
+                );
                 None
             }
         }
@@ -51,7 +55,8 @@ impl<'a> Parser<'a> {
                     }
                 }
                 TokenKind::RoundL => {
-                    let mut arguments_parser = combinators::comma_sequence(Self::binary_expr, &[TokenKind::RoundR]);
+                    let mut arguments_parser =
+                        combinators::comma_sequence(Self::binary_expr, &[TokenKind::RoundR]);
                     let args = arguments_parser(self)?;
                     expr = Expr::Call {
                         func: Box::new(expr),

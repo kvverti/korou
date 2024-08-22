@@ -1,7 +1,7 @@
 //! The parser.
 
 use crate::cache::StringCache;
-use crate::diagnostic::Diagnostics;
+use crate::diagnostic::{Code, Diagnostics};
 use crate::token::{Token, TokenKind};
 use crate::tokenizer::Tokenizer;
 
@@ -27,10 +27,8 @@ impl<'a> Parser<'a> {
         self.tz
             .expect_one_of(kind)
             .map_err(|tkn| {
-                self.ds.error(
-                    Token::span(&tkn),
-                    format!("Expected this token: `{:?}`", kind),
-                );
+                self.ds
+                    .add(Code::Unexpected, Token::span(&tkn), format!("{:?}", *tkn));
             })
             .ok()
     }

@@ -1,6 +1,6 @@
 use std::num::IntErrorKind;
 
-use crate::{ast::Integer, span::Spanned, token::TokenKind, tokens::Ident};
+use crate::{ast::Integer, diagnostic::Code, span::Spanned, token::TokenKind, tokens::Ident};
 
 use super::Parser;
 
@@ -28,25 +28,22 @@ impl<'a> Parser<'a> {
                     "0c" | "0C" => 8,
                     "0b" | "0B" => 2,
                     _ => {
-                        self.ds
-                            .error(span, format!("Unrecognized base prefix: `{}`", base));
+                        self.ds.add(Code::InvalidIntegerBase, span, base);
                         return None;
                     }
                 };
                 (src, radix)
             }
             _ => {
-                self.ds.error(
-                    span,
-                    format!("Expected this token: `{:?}`", TokenKind::Number),
-                );
+                self.ds
+                    .add(Code::Unexpected, span, format!("{:?}", TokenKind::Number));
                 return None;
             }
         };
         let num = i64::from_str_radix(src, radix)
             .map_err(|err| match err.kind() {
-                IntErrorKind::PosOverflow => self.ds.error(span, "Integer too large"),
-                IntErrorKind::InvalidDigit => self.ds.error(span, "Invalid digit"),
+                IntErrorKind::PosOverflow => self.ds.add(Code::IntegerTooLarge, span, ""),
+                IntErrorKind::InvalidDigit => self.ds.add(Code::InvalidIntegerDigit, span, ""),
                 _ => unreachable!("Unexpected error: {:?}; on input: {} r {}", err, src, radix),
             })
             .ok()?;
