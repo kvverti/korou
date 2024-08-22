@@ -2,6 +2,7 @@
 
 use crate::cache::StringCache;
 use crate::diagnostic::{Code, Diagnostics};
+use crate::span::Spanned;
 use crate::token::{Token, TokenKind};
 use crate::tokenizer::Tokenizer;
 
@@ -9,6 +10,7 @@ mod atoms;
 mod combinators;
 mod expr;
 mod paths;
+mod statement;
 
 pub struct Parser<'a> {
     pub tz: Tokenizer<'a>,
@@ -18,34 +20,34 @@ pub struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     /// Advances to the next token and asserts its kind.
-    fn expect(&mut self, kind: TokenKind) -> Option<Token> {
+    fn expect(&mut self, kind: TokenKind) -> Spanned<Option<TokenKind>> {
         self.expect_one_of(&[kind])
     }
 
     /// Advances to the next token and asserts its kind.
-    fn expect_one_of(&mut self, kind: &[TokenKind]) -> Option<Token> {
-        self.tz
-            .expect_one_of(kind)
-            .map_err(|tkn| {
-                self.ds
-                    .add(Code::Unexpected, Token::span(&tkn), format!("{:?}", *tkn));
-            })
-            .ok()
+    fn expect_one_of(&mut self, kind: &[TokenKind]) -> Spanned<Option<TokenKind>> {
+        match self.tz.expect_one_of(kind) {
+            Ok(token) => Token::map(token, Some),
+            Err(token) => {
+                self.ds.add(Code::Unexpected, Token::span(&token), format!("{:?}", *token));
+                Spanned::map(token, |_| None)
+            }
+        }
     }
 
     /// Consumes the next token if it matches the given token kind.
-    fn consume(&mut self, kind: TokenKind) -> Option<Token> {
+    fn consume(&mut self, kind: TokenKind) -> Spanned<Option<TokenKind>> {
         self.consume_one_of(&[kind])
     }
 
     /// Consumes the next token if it matches one of the given token kinds.
-    fn consume_one_of(&mut self, kinds: &[TokenKind]) -> Option<Token> {
+    fn consume_one_of(&mut self, kinds: &[TokenKind]) -> Spanned<Option<TokenKind>> {
         let tkn = self.tz.peek();
         if kinds.contains(&tkn) {
             self.tz.next();
-            Some(tkn)
+            Token::map(tkn, Some)
         } else {
-            None
+            Token::map(tkn, |_| None)
         }
     }
 

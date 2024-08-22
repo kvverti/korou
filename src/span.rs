@@ -61,6 +61,16 @@ impl<T> Spanned<T> {
     pub fn span(this: &Self) -> Span {
         this.span
     }
+
+    pub fn map<R, F>(this: Self, f: F) -> Spanned<R>
+    where
+        F: FnOnce(T) -> R,
+    {
+        Spanned {
+            span: this.span,
+            value: f(this.value),
+        }
+    }
 }
 
 impl<T: ?Sized> Deref for Spanned<T> {

@@ -16,6 +16,7 @@ pub enum IntRadix {
 
 use crate::token::TokenKind;
 
+#[deprecated]
 pub use super::ast::{Ident, QualifiedIdent};
 
 /// Binary operator.

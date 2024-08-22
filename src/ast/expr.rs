@@ -1,5 +1,5 @@
 use super::{EffectHandler, Integer, Statement, TypedIdent};
-use crate::tokens::{Ident, Operator, QualifiedIdent};
+use crate::{tokens::{Ident, Operator, QualifiedIdent}, span::Span};
 
 /// Expressions.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -48,4 +48,8 @@ pub enum Expr {
         handler: Box<Expr>,
         stmts: Vec<Statement>,
     },
+    /// Error node.
+    Error {
+        err_span: Span,
+    }
 }

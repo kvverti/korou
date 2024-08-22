@@ -1,27 +1,33 @@
 use crate::{
     span::{Span, Spanned},
     token::TokenKind,
-    tokens::QualifiedIdent,
+    tokens::QualifiedIdent, ast::Expr,
 };
 
 impl<'a> Parser<'a> {
     /// Parses a qualified identifier from the next tokens.
-    pub(super) fn qualified_ident(&mut self) -> Option<Spanned<QualifiedIdent>> {
+    pub(super) fn qualified_ident(&mut self) -> Spanned<Expr> {
         let mut paths = Vec::new();
-        let (mut span, id) = self.ident()?.into_span_value();
+        let (mut span, id) = self.ident().into_span_value();
+        let Some(id) = id else {
+            return Spanned::from_span_value(span, Expr::Error { err_span: span });
+        };
         paths.push(id);
         while self.consume(TokenKind::Scope).is_some() {
-            let (next_span, id) = self.ident()?.into_span_value();
+            let (next_span, id) = self.ident().into_span_value();
+            let Some(id) = id else {
+                return Spanned::from_span_value(span, Expr::Error { err_span: next_span })
+            };
             paths.push(id);
             Span::expand(&mut span, next_span);
         }
-        Some(Spanned::from_span_value(span, QualifiedIdent(paths)))
+        Spanned::from_span_value(span, Expr::Ident(QualifiedIdent(paths)))
     }
 }
 
 macro_rules! qident {
     ($($components:ident)::*) => {
-        $crate::ast::QualifiedIdent(vec![$($components),*])
+        $crate::ast::Expr::Ident($crate::ast::QualifiedIdent(vec![$($components),*]))
     };
     ($bgn:literal .. $end:literal : $($ts:tt)*) => {
         $crate::span::Spanned::from_span_value(
@@ -54,7 +60,7 @@ mod tests {
         };
 
         let expected = qident!(0..13: foo::bar::baz);
-        assert_eq!(expected, parser.qualified_ident().unwrap());
+        assert_eq!(expected, parser.qualified_ident());
         assert!(!parser.ds.has_errors());
     }
 }
