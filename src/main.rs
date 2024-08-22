@@ -2,10 +2,11 @@
 
 use std::{error::Error, io::{stdin, stdout, Write}};
 
-use crate::{cache::StringCache, tokenizer::Tokenizer, parse::{Parser, diagnostic::Diagnostics}};
+use crate::{parse::Parser, cache::StringCache, tokenizer::Tokenizer, diagnostic::Diagnostics};
 
 mod ast;
 mod cache;
+mod diagnostic;
 mod mir;
 mod parse;
 mod span;
@@ -30,8 +31,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         let tz = Tokenizer::from_parts(file, &input);
         let mut ds = Diagnostics::new();
         let mut cache = StringCache::new();
-        let mut parser = Parser::from_parts(tz, &mut cache);
-        let expr = parser.block_expr(&mut ds);
+        let mut parser = Parser {
+            tz,
+            cache: &mut cache,
+            ds: &mut ds,
+        };
+        let expr = parser.block_expr();
         println!("{:?}", expr);
     }
     Ok(())

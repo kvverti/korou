@@ -1,16 +1,14 @@
-use crate::{span::{Spanned, Span}, tokens::QualifiedIdent, token::TokenKind};
-
-use super::{Parser, diagnostic::Diagnostics};
+use crate::{span::{Spanned, Span}, tokens::QualifiedIdent, token::TokenKind, diagnostic::Diagnostics};
 
 
 impl<'a> Parser<'a> {
     /// Parses a qualified identifier from the next tokens.
-    pub(super) fn qualified_ident(&mut self, ds: &mut Diagnostics) -> Option<Spanned<QualifiedIdent>> {
+    pub(super) fn qualified_ident(&mut self) -> Option<Spanned<QualifiedIdent>> {
         let mut paths = Vec::new();
-        let (mut span, id) = self.ident(ds)?.into_span_value();
+        let (mut span, id) = self.ident()?.into_span_value();
         paths.push(id);
         while self.consume(TokenKind::Scope).is_some() {
-            let (next_span, id) = self.ident(ds)?.into_span_value();
+            let (next_span, id) = self.ident()?.into_span_value();
             paths.push(id);
             Span::expand(&mut span, next_span);
         }
@@ -31,6 +29,8 @@ macro_rules! qident {
 }
 pub(crate) use qident;
 
+use super::Parser;
+
 #[cfg(test)]
 mod tests {
     use crate::{cache::StringCache, tokenizer::Tokenizer, parse::declare_idents};
@@ -44,12 +44,14 @@ mod tests {
         declare_idents!(cache; foo bar baz);
 
         let tokenizer = Tokenizer::from_parts(file_name, "foo::bar::baz");
-        let mut parser = Parser::from_parts(tokenizer, &mut cache);
+        let mut parser = Parser {
+            tz: tokenizer,
+            cache: &mut cache,
+            ds: &mut Diagnostics::new(),
+        };
 
-        let mut diagnostics = Diagnostics::new();
         let expected = qident!(0..13: foo::bar::baz);
-        let expected_diagnostics = Diagnostics::new();
-        assert_eq!(expected, parser.qualified_ident(&mut diagnostics).unwrap());
-        assert_eq!(expected_diagnostics, diagnostics);
+        assert_eq!(expected, parser.qualified_ident().unwrap());
+        assert!(!parser.ds.has_errors());
     }
 }

@@ -2,21 +2,21 @@ use std::num::IntErrorKind;
 
 use crate::{span::Spanned, tokens::Ident, token::TokenKind, ast::Integer};
 
-use super::{Parser, diagnostic::Diagnostics};
+use super::Parser;
 
 // make a qualified ident an "atom" and use it to construct a unary expression
 
 /// Holds parsing functions for atoms.
 impl<'a> Parser<'a> {
     /// Parses an identifier from the next token.
-    pub(super) fn ident(&mut self, ds: &mut Diagnostics) -> Option<Spanned<Ident>> {
-        let (span, _) = self.expect(TokenKind::Ident, ds)?.into_span_value();
+    pub(super) fn ident(&mut self) -> Option<Spanned<Ident>> {
+        let (span, _) = self.expect(TokenKind::Ident)?.into_span_value();
         let key = self.cache.intern(self.tz.src_for(span));
         Some(Spanned::from_span_value(span, Ident(key)))
     }
 
     /// Parses an integer from the next token.
-    pub(super) fn integer(&mut self, ds: &mut Diagnostics) -> Option<Spanned<Integer>> {
+    pub(super) fn integer(&mut self) -> Option<Spanned<Integer>> {
         let (span, t) = self.tz.next().into_span_value();
         let (src, radix) = match t {
             TokenKind::Number => (self.tz.src_for(span), 10),
@@ -28,21 +28,22 @@ impl<'a> Parser<'a> {
                     "0c" | "0C" => 8,
                     "0b" | "0B" => 2,
                     _ => {
-                        ds.error(span, format!("Unrecognized base prefix: `{}`", base));
+                        self.ds.error(span, format!("Unrecognized base prefix: `{}`", base));
                         return None;
                     },
                 };
                 (src, radix)
             }
             _ => {
-                ds.error(span, format!("Expected this token: `{:?}`", TokenKind::Number));
+                self.ds.error(span, format!("Expected this token: `{:?}`", TokenKind::Number));
                 return None;
             }
         };
         let num = i64::from_str_radix(src, radix)
             .map_err(|err| match err.kind() {
-                IntErrorKind::PosOverflow => ds.error(span, "Integer too large"),
-                _ => unreachable!(),
+                IntErrorKind::PosOverflow => self.ds.error(span, "Integer too large"),
+                IntErrorKind::InvalidDigit => self.ds.error(span, "Invalid digit"),
+                _ => unreachable!("Unexpected error: {:?}; on input: {} r {}", err, src, radix),
             })
             .ok()?;
         Some(Spanned::from_span_value(span, Integer(num)))
@@ -63,7 +64,7 @@ pub(crate) use atom;
 
 #[cfg(test)]
 mod tests {
-    use crate::{cache::StringCache, tokenizer::Tokenizer};
+    use crate::{cache::StringCache, tokenizer::Tokenizer, diagnostic::Diagnostics};
 
     use super::*;
     
@@ -73,30 +74,30 @@ mod tests {
         let file_name = cache.intern("mysource.ku");
         let hello = cache.intern("hello");
         let tokenizer = Tokenizer::from_parts(file_name, "hello 17 0xc3f 0c19");
-        let mut parser = Parser::from_parts(tokenizer, &mut cache);
+        let mut parser = Parser {
+            tz: tokenizer,
+            cache: &mut cache,
+            ds: &mut Diagnostics::new(),
+        };
 
-        let mut diagnostics = Diagnostics::new();
         let expected = atom!(0..5: hello);
-        assert_eq!(expected, parser.ident(&mut diagnostics).expect("ident"));
-        assert!(!diagnostics.has_errors());
+        assert_eq!(expected, parser.ident().expect("ident"));
+        assert!(!parser.ds.has_errors());
 
-        let mut diagnostics = Diagnostics::new();
         let expected = atom!(6..8: int 17);
         assert_eq!(
             expected,
-            parser.integer(&mut diagnostics).expect("integer1")
+            parser.integer().expect("integer1")
         );
-        assert!(!diagnostics.has_errors());
+        assert!(!parser.ds.has_errors());
 
-        let mut diagnostics = Diagnostics::new();
         let expected = atom!(9..14: int 0xc3f);
         assert_eq!(
             expected,
-            parser.integer(&mut diagnostics).expect("integer2")
+            parser.integer().expect("integer2")
         );
-        assert!(!diagnostics.has_errors());
+        assert!(!parser.ds.has_errors());
 
-        let mut diagnostics = Diagnostics::new();
-        assert!(parser.integer(&mut diagnostics).is_none());
+        assert!(parser.integer().is_none());
     }
 }

@@ -38,6 +38,10 @@ impl Diagnostics {
     pub fn has_errors(&self) -> bool {
         self.diagnostics.iter().any(|d| d.typ == DiagnosticType::Error)
     }
+
+    pub fn clear(&mut self) {
+        self.diagnostics.clear();
+    }
 }
 
 impl IntoIterator for Diagnostics {

@@ -1,37 +1,33 @@
 //! The parser.
 
 use crate::cache::StringCache;
-use crate::parse::diagnostic::Diagnostics;
+use crate::diagnostic::Diagnostics;
 use crate::token::{Token, TokenKind};
 use crate::tokenizer::Tokenizer;
 
 mod atoms;
 mod combinators;
-pub mod diagnostic;
 mod expr;
 mod paths;
 
 pub struct Parser<'a> {
-    tz: Tokenizer<'a>,
-    cache: &'a mut StringCache,
+    pub tz: Tokenizer<'a>,
+    pub cache: &'a mut StringCache,
+    pub ds: &'a mut Diagnostics,
 }
 
 impl<'a> Parser<'a> {
-    pub fn from_parts(tz: Tokenizer<'a>, cache: &'a mut StringCache) -> Self {
-        Self { tz, cache }
+    /// Advances to the next token and asserts its kind.
+    fn expect(&mut self, kind: TokenKind) -> Option<Token> {
+        self.expect_one_of(&[kind])
     }
 
     /// Advances to the next token and asserts its kind.
-    fn expect(&mut self, kind: TokenKind, ds: &mut Diagnostics) -> Option<Token> {
-        self.expect_one_of(&[kind], ds)
-    }
-
-    /// Advances to the next token and asserts its kind.
-    fn expect_one_of(&mut self, kind: &[TokenKind], ds: &mut Diagnostics) -> Option<Token> {
+    fn expect_one_of(&mut self, kind: &[TokenKind]) -> Option<Token> {
         self.tz
             .expect_one_of(kind)
             .map_err(|tkn| {
-                ds.error(Token::span(&tkn), format!("Expected this token: `{:?}`", kind));
+                self.ds.error(Token::span(&tkn), format!("Expected this token: `{:?}`", kind));
             })
             .ok()
     }
