@@ -11,8 +11,10 @@ static BASE_PREFIX_INTEGER: Lazy<Regex> =
     Lazy::new(|| Regex::new("^0[xcbXCB][0-9a-fA-F]+").expect("Base prefix integer regex"));
 static INTEGER: Lazy<Regex> = Lazy::new(|| Regex::new("^[1-9][0-9]*").expect("Integer regex"));
 
+type Rule = fn(&str) -> Option<(TokenKind, usize)>;
+
 /// All tokenizing rules. When more than one rule applies, the earliest rule is used.
-pub const RULES: &[fn(&str) -> Option<(TokenKind, usize)>] = &[
+pub const RULES: &[Rule] = &[
     eof,
     width_two_punct,
     width_one_punct,
@@ -57,7 +59,7 @@ pub fn unprefixed_number(src: &str) -> Option<(TokenKind, usize)> {
     INTEGER
         .find(src)
         .map(|m| m.end())
-        .or_else(|| src.starts_with("0").then(|| 1))
+        .or_else(|| src.starts_with('0').then_some(1))
         .map(|e| (TokenKind::Number, e))
 }
 

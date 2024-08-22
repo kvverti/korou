@@ -2,7 +2,7 @@
 
 use std::{error::Error, io::{stdin, stdout, Write}};
 
-use crate::{cache::StringCache, token::TokenKind, tokenizer::Tokenizer, parse::{Parser, diagnostic::Diagnostics}};
+use crate::{cache::StringCache, tokenizer::Tokenizer, parse::{Parser, diagnostic::Diagnostics}};
 
 mod ast;
 mod cache;

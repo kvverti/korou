@@ -10,7 +10,6 @@ mod number;
 mod statement;
 mod types;
 
-pub use effect::Effect;
 pub use expr::Expr;
 pub use func::{Func, FuncHeader};
 pub use generic::{TypeParam, TypedIdent};

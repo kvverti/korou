@@ -1,4 +1,4 @@
-use crate::{ast::Expr, token::TokenKind, span::Spanned, tokenizer::Tokenizer, tokens::Operator};
+use crate::{ast::Expr, token::TokenKind, span::Spanned};
 
 use super::{Parser, diagnostic::Diagnostics};
 

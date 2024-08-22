@@ -56,7 +56,7 @@ pub enum TokenKind {
 }
 
 impl TokenKind {
-    pub const KEYWORDS: &[Self] = &[
+    pub const KEYWORDS: &'static [Self] = &[
         Self::Do,
         Self::Effect,
         Self::Else,
@@ -73,7 +73,7 @@ impl TokenKind {
         Self::With,
     ];
 
-    pub const WIDTH_TWO_PUNCT: &[Self] = &[
+    pub const WIDTH_TWO_PUNCT: &'static [Self] = &[
         Self::Arrow,
         Self::DoubleEquals,
         Self::GtEquals,
@@ -81,7 +81,7 @@ impl TokenKind {
         Self::Scope,
     ];
 
-    pub const WIDTH_ONE_PUNCT: &[Self] = &[
+    pub const WIDTH_ONE_PUNCT: &'static [Self] = &[
         Self::Colon,
         Self::Comma,
         Self::CurlyL,
@@ -103,7 +103,7 @@ impl TokenKind {
     ];
 
     /// The token kinds that are definitely not the next token in a full expression.
-    pub const EXPR_SEPARATORS: &[Self] = &[
+    pub const EXPR_SEPARATORS: &'static [Self] = &[
         Self::Eof,
         Self::Unrecognized,
         Self::Arrow,
