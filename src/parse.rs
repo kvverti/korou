@@ -1,17 +1,15 @@
 //! The parser.
 
-use crate::ast::QualifiedIdent;
 use crate::cache::StringCache;
 use crate::parse::diagnostic::Diagnostics;
-use crate::span::Spanned;
 use crate::token::{Token, TokenKind};
 use crate::tokenizer::Tokenizer;
 
 mod atoms;
 mod combinators;
-mod diagnostic;
-
-// Atoms
+pub mod diagnostic;
+mod expr;
+mod paths;
 
 pub struct Parser<'a> {
     tz: Tokenizer<'a>,
@@ -32,8 +30,8 @@ impl<'a> Parser<'a> {
     fn expect_one_of(&mut self, kind: &[TokenKind], ds: &mut Diagnostics) -> Option<Token> {
         self.tz
             .expect_one_of(kind)
-            .map_err(|_tkn| {
-                ds.error(format!("Expected this token: {:?}", kind));
+            .map_err(|tkn| {
+                ds.error(Token::span(&tkn), format!("Expected this token: `{:?}`", kind));
             })
             .ok()
     }
@@ -54,33 +52,11 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Parses a qualified identifier from the next tokens.
-    fn qualified_ident(&mut self, ds: &mut Diagnostics) -> Option<Spanned<QualifiedIdent>> {
-        let mut paths = Vec::new();
-        let id = *self.ident(ds)?;
-        let bgn_idx = self.tz.index();
-        paths.push(id);
-        while self.consume(TokenKind::Scope).is_some() {
-            let id = *self.ident(ds)?;
-            paths.push(id);
-        }
-        let end_idx = self.tz.index();
-        Some(Spanned::from_span_value((bgn_idx..end_idx + 1).into(), QualifiedIdent(paths)))
+    /// Advances the internal tokenizer, ignoring the next token.
+    fn advance(&mut self) {
+        self.tz.next();
     }
 }
-
-macro_rules! qident {
-    ($($components:ident)::*) => {
-        $crate::ast::QualifiedIdent(vec![$($components),*])
-    };
-    ($bgn:literal .. $end:literal : $($ts:tt)*) => {
-        $crate::span::Spanned::from_span_value(
-            ($bgn..$end).into(),
-            qident!($($ts)*),
-        )
-    }
-}
-pub(crate) use qident;
 
 /// Shorthand for declaring many identifiers.
 macro_rules! declare_idents {
@@ -91,27 +67,3 @@ macro_rules! declare_idents {
     };
 }
 pub(crate) use declare_idents;
-
-#[cfg(test)]
-mod tests {
-    use crate::cache::StringCache;
-    use crate::parse::diagnostic::Diagnostics;
-    use crate::parse::Parser;
-    use crate::tokenizer::Tokenizer;
-
-    #[test]
-    fn qualified_ident() {
-        let mut cache = StringCache::new();
-        let file_name = cache.intern("mysource.ku");
-        declare_idents!(cache; foo bar baz);
-
-        let tokenizer = Tokenizer::from_parts(file_name, "foo::bar::baz");
-        let mut parser = Parser::from_parts(tokenizer, &mut cache);
-
-        let mut diagnostics = Diagnostics::new();
-        let expected = qident!(0..5: foo::bar::baz);
-        let expected_diagnostics = Diagnostics::new();
-        assert_eq!(expected, parser.qualified_ident(&mut diagnostics).unwrap());
-        assert_eq!(expected_diagnostics, diagnostics);
-    }
-}

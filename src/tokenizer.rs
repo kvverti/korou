@@ -10,7 +10,6 @@ pub struct Tokenizer<'a> {
     file: StringKey,
     base: &'a str,
     src: &'a str,
-    index: usize,
     /// Peeked token
     next: Option<Token>,
 }
@@ -21,7 +20,6 @@ impl<'a> Tokenizer<'a> {
         Self {
             file,
             src,
-            index: 0,
             base: src,
             next: None,
         }
@@ -62,13 +60,7 @@ impl<'a> Tokenizer<'a> {
     pub fn next(&mut self) -> Token {
         let tkn = self.next.take().unwrap_or_else(|| self.next_token());
         self.src = &self.src[Token::span(&tkn).len..];
-        self.index += 1;
         tkn
-    }
-
-    /// Gets the index of the current token.
-    pub fn index(&self) -> usize {
-        self.index.checked_sub(1).expect("Tokenizer has not been started")
     }
 
     /// Gets the next token, advances the tokenizer, and tests the token's kind against the given kind.

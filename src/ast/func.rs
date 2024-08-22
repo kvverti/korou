@@ -1,4 +1,4 @@
-use super::{Effects, Statement, TypeParam, TypedIdent};
+use super::{Statement, TypeParam, TypedIdent, BaseType};
 use crate::tokens::Ident;
 
 /// Functions.
@@ -14,5 +14,5 @@ pub struct FuncHeader {
     pub type_params: Vec<TypeParam>,
     pub effect_params: Vec<TypeParam>,
     pub params: Vec<TypedIdent>,
-    pub effects: Effects,
+    pub effects: Vec<BaseType>,
 }

@@ -42,15 +42,6 @@ impl From<Range<usize>> for Span {
     }
 }
 
-impl From<usize> for Span {
-    fn from(value: usize) -> Self {
-        Self {
-            pos: value,
-            len: 1,
-        }
-    }
-}
-
 /// A value associated with a span. This can be used transparently where a value is required.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Spanned<T: ?Sized> {

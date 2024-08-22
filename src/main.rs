@@ -2,7 +2,7 @@
 
 use std::{error::Error, io::{stdin, stdout, Write}};
 
-use crate::{cache::StringCache, token::TokenKind, tokenizer::Tokenizer};
+use crate::{cache::StringCache, token::TokenKind, tokenizer::Tokenizer, parse::{Parser, diagnostic::Diagnostics}};
 
 mod ast;
 mod cache;
@@ -27,11 +27,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         let mut cache = StringCache::new();
         let file = cache.intern("repl.ku");
-        let mut tz = Tokenizer::from_parts(file, &input);
-        let tokens = std::iter::from_fn(|| Some(tz.next()))
-            .take_while(|&el| *el != TokenKind::Eof)
-            .collect::<Vec<_>>();
-        println!("{:?}", tokens);
+        let tz = Tokenizer::from_parts(file, &input);
+        let mut ds = Diagnostics::new();
+        let mut cache = StringCache::new();
+        let mut parser = Parser::from_parts(tz, &mut cache);
+        let expr = parser.block_expr(&mut ds);
+        println!("{:?}", expr);
     }
     Ok(())
 }

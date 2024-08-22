@@ -1,5 +1,5 @@
-use super::{EffectHandler, Statement, TypedIdent};
-use crate::tokens::{Ident, IntLiteral, Operator, QualifiedIdent};
+use super::{EffectHandler, Statement, TypedIdent, Integer};
+use crate::tokens::{Ident, Operator, QualifiedIdent};
 
 /// Expressions.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -7,11 +7,14 @@ pub enum Expr {
     /// (Potentially) qualified identifier.
     Ident(QualifiedIdent),
     /// Simple integer literal.
-    Int(IntLiteral),
+    Int(Integer),
     /// The implicit continuation, `k`.
     K,
-    /// Explicit operator.
-    Op(Operator),
+    /// A binary expression of a single operator
+    Binary {
+        op: Operator,
+        operands: Vec<Expr>,
+    },
     /// Member access.
     Member {
         recv: Box<Expr>,

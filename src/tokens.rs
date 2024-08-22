@@ -14,6 +14,8 @@ pub enum IntRadix {
     Binary,
 }
 
+use crate::token::TokenKind;
+
 pub use super::ast::{Ident, QualifiedIdent};
 
 /// Binary operator.
@@ -24,4 +26,21 @@ pub enum Operator {
     Mul,
     Div,
     Rem,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct UnexpectedError;
+
+impl TryFrom<TokenKind> for Operator {
+    type Error = UnexpectedError;
+
+    fn try_from(value: TokenKind) -> Result<Self, Self::Error> {
+        match value {
+            TokenKind::Plus => Ok(Self::Add),
+            TokenKind::Minus => Ok(Self::Sub),
+            TokenKind::Star => Ok(Self::Mul),
+            TokenKind::Slash => Ok(Self::Div),
+            _ => Err(UnexpectedError),
+        }
+    }
 }
