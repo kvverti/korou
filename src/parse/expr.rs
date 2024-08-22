@@ -1,6 +1,6 @@
 use crate::{ast::Expr, span::Spanned, token::TokenKind};
 
-use super::Parser;
+use super::{Parser, combinators};
 
 impl<'a> Parser<'a> {
     /// Parses an expression that can be the operand of a binary expression.
@@ -51,11 +51,11 @@ impl<'a> Parser<'a> {
                     }
                 }
                 TokenKind::RoundL => {
-                    // todo: arguments
-                    self.expect(TokenKind::RoundR)?;
+                    let mut arguments_parser = combinators::comma_sequence(Self::binary_expr, &[TokenKind::RoundR]);
+                    let args = arguments_parser(self)?;
                     expr = Expr::Call {
                         func: Box::new(expr),
-                        args: Vec::new(),
+                        args,
                     }
                 }
                 kind => unreachable!("Unknown free operator token {kind:?}"),
