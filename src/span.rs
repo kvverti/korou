@@ -1,6 +1,9 @@
 //! Contains the `Span` type which represents a range of source code.
 
-use std::{ops::{Deref, DerefMut, Range}, fmt::Display};
+use std::{
+    fmt::Display,
+    ops::{Deref, DerefMut, Range},
+};
 
 /// A span of elements in some stream. Can be columns in source code or tokens.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -12,10 +15,7 @@ pub struct Span {
 impl Span {
     /// Creates a span of no elements.
     pub const fn new() -> Self {
-        Self {
-            pos: 0,
-            len: 0,
-        }
+        Self { pos: 0, len: 0 }
     }
 
     /// Extends this span to cover the range of the given span.

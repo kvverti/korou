@@ -28,7 +28,11 @@ impl Diagnostics {
     }
 
     pub fn error(&mut self, span: Span, msg: impl Into<String>) {
-        self.diagnostics.push( Diagnostic { typ: DiagnosticType::Error, span, msg: msg.into() });
+        self.diagnostics.push(Diagnostic {
+            typ: DiagnosticType::Error,
+            span,
+            msg: msg.into(),
+        });
     }
 
     pub fn combine(&mut self, others: Self) {
@@ -36,7 +40,9 @@ impl Diagnostics {
     }
 
     pub fn has_errors(&self) -> bool {
-        self.diagnostics.iter().any(|d| d.typ == DiagnosticType::Error)
+        self.diagnostics
+            .iter()
+            .any(|d| d.typ == DiagnosticType::Error)
     }
 
     pub fn clear(&mut self) {

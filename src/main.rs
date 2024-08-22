@@ -1,8 +1,11 @@
 #![allow(dead_code)]
 
-use std::{error::Error, io::{stdin, stdout, Write}};
+use std::{
+    error::Error,
+    io::{stdin, stdout, Write},
+};
 
-use crate::{parse::Parser, cache::StringCache, tokenizer::Tokenizer, diagnostic::Diagnostics};
+use crate::{cache::StringCache, diagnostic::Diagnostics, parse::Parser, tokenizer::Tokenizer};
 
 mod ast;
 mod cache;

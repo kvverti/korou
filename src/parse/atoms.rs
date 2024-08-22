@@ -1,6 +1,6 @@
 use std::num::IntErrorKind;
 
-use crate::{span::Spanned, tokens::Ident, token::TokenKind, ast::Integer};
+use crate::{ast::Integer, span::Spanned, token::TokenKind, tokens::Ident};
 
 use super::Parser;
 
@@ -28,14 +28,18 @@ impl<'a> Parser<'a> {
                     "0c" | "0C" => 8,
                     "0b" | "0B" => 2,
                     _ => {
-                        self.ds.error(span, format!("Unrecognized base prefix: `{}`", base));
+                        self.ds
+                            .error(span, format!("Unrecognized base prefix: `{}`", base));
                         return None;
-                    },
+                    }
                 };
                 (src, radix)
             }
             _ => {
-                self.ds.error(span, format!("Expected this token: `{:?}`", TokenKind::Number));
+                self.ds.error(
+                    span,
+                    format!("Expected this token: `{:?}`", TokenKind::Number),
+                );
                 return None;
             }
         };
@@ -64,10 +68,10 @@ pub(crate) use atom;
 
 #[cfg(test)]
 mod tests {
-    use crate::{cache::StringCache, tokenizer::Tokenizer, diagnostic::Diagnostics};
+    use crate::{cache::StringCache, diagnostic::Diagnostics, tokenizer::Tokenizer};
 
     use super::*;
-    
+
     #[test]
     fn atoms() {
         let mut cache = StringCache::new();
@@ -85,17 +89,11 @@ mod tests {
         assert!(!parser.ds.has_errors());
 
         let expected = atom!(6..8: int 17);
-        assert_eq!(
-            expected,
-            parser.integer().expect("integer1")
-        );
+        assert_eq!(expected, parser.integer().expect("integer1"));
         assert!(!parser.ds.has_errors());
 
         let expected = atom!(9..14: int 0xc3f);
-        assert_eq!(
-            expected,
-            parser.integer().expect("integer2")
-        );
+        assert_eq!(expected, parser.integer().expect("integer2"));
         assert!(!parser.ds.has_errors());
 
         assert!(parser.integer().is_none());

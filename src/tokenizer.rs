@@ -94,94 +94,36 @@ mod tests {
         let file_name = cache.intern("mysource.ku");
         let mut tokenizer = Tokenizer::from_parts(file_name, "do foo 3 0xc3 0b01,0c9, 0");
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 0,
-                len: 2,
-            },
-            TokenKind::Do,
-        );
+        let expected = Token::from_span_value(Span { pos: 0, len: 2 }, TokenKind::Do);
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 3,
-                len: 3,
-            },
-            TokenKind::Ident,
-        );
+        let expected = Token::from_span_value(Span { pos: 3, len: 3 }, TokenKind::Ident);
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 7,
-                len: 1,
-            },
-            TokenKind::Number,
-        );
+        let expected = Token::from_span_value(Span { pos: 7, len: 1 }, TokenKind::Number);
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 9,
-                len: 4,
-            },
-            TokenKind::BasePrefixNumber,
-        );
+        let expected = Token::from_span_value(Span { pos: 9, len: 4 }, TokenKind::BasePrefixNumber);
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 14,
-                len: 4,
-            },
-            TokenKind::BasePrefixNumber,
-        );
+        let expected =
+            Token::from_span_value(Span { pos: 14, len: 4 }, TokenKind::BasePrefixNumber);
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 18,
-                len: 1,
-            },
-            TokenKind::Comma,
-        );
+        let expected = Token::from_span_value(Span { pos: 18, len: 1 }, TokenKind::Comma);
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 19,
-                len: 3,
-            },
-            TokenKind::BasePrefixNumber,
-        );
+        let expected =
+            Token::from_span_value(Span { pos: 19, len: 3 }, TokenKind::BasePrefixNumber);
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 22,
-                len: 1,
-            },
-            TokenKind::Comma,
-        );
+        let expected = Token::from_span_value(Span { pos: 22, len: 1 }, TokenKind::Comma);
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 24,
-                len: 1,
-            },
-            TokenKind::Number,
-        );
+        let expected = Token::from_span_value(Span { pos: 24, len: 1 }, TokenKind::Number);
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 25,
-                len: 0,
-            },
-            TokenKind::Eof,
-        );
+        let expected = Token::from_span_value(Span { pos: 25, len: 0 }, TokenKind::Eof);
         assert_eq!(expected, tokenizer.next());
     }
 
@@ -191,58 +133,22 @@ mod tests {
         let file_name = cache.intern("mysource.ku");
         let mut tokenizer = Tokenizer::from_parts(file_name, "  >= -> -\\>  ");
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 2,
-                len: 2,
-            },
-            TokenKind::GtEquals,
-        );
+        let expected = Token::from_span_value(Span { pos: 2, len: 2 }, TokenKind::GtEquals);
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 5,
-                len: 2,
-            },
-            TokenKind::Arrow,
-        );
+        let expected = Token::from_span_value(Span { pos: 5, len: 2 }, TokenKind::Arrow);
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 8,
-                len: 1,
-            },
-            TokenKind::Minus,
-        );
+        let expected = Token::from_span_value(Span { pos: 8, len: 1 }, TokenKind::Minus);
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 9,
-                len: 1,
-            },
-            TokenKind::Unrecognized,
-        );
+        let expected = Token::from_span_value(Span { pos: 9, len: 1 }, TokenKind::Unrecognized);
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 10,
-                len: 1,
-            },
-            TokenKind::Gt,
-        );
+        let expected = Token::from_span_value(Span { pos: 10, len: 1 }, TokenKind::Gt);
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 13,
-                len: 0,
-            },
-            TokenKind::Eof,
-        );
+        let expected = Token::from_span_value(Span { pos: 13, len: 0 }, TokenKind::Eof);
         assert_eq!(expected, tokenizer.next());
     }
 
@@ -252,33 +158,15 @@ mod tests {
         let file_name = cache.intern("mysource.ku");
         let mut tokenizer = Tokenizer::from_parts(file_name, "foo bar");
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 0,
-                len: 3,
-            },
-            TokenKind::Ident,
-        );
+        let expected = Token::from_span_value(Span { pos: 0, len: 3 }, TokenKind::Ident);
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 4,
-                len: 3,
-            },
-            TokenKind::Ident,
-        );
+        let expected = Token::from_span_value(Span { pos: 4, len: 3 }, TokenKind::Ident);
         assert_eq!(expected, tokenizer.peek());
         assert_eq!(expected, tokenizer.peek());
         assert_eq!(expected, tokenizer.next());
 
-        let expected = Token::from_span_value(
-            Span {
-                pos: 7,
-                len: 0,
-            },
-            TokenKind::Eof,
-        );
+        let expected = Token::from_span_value(Span { pos: 7, len: 0 }, TokenKind::Eof);
         assert_eq!(expected, tokenizer.peek());
         assert_eq!(expected, tokenizer.next());
         assert_eq!(expected, tokenizer.next());

@@ -1,4 +1,4 @@
-use super::{EffectHandler, Statement, TypedIdent, Integer};
+use super::{EffectHandler, Integer, Statement, TypedIdent};
 use crate::tokens::{Ident, Operator, QualifiedIdent};
 
 /// Expressions.

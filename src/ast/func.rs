@@ -1,4 +1,4 @@
-use super::{Statement, TypeParam, TypedIdent, BaseType};
+use super::{BaseType, Statement, TypeParam, TypedIdent};
 use crate::tokens::Ident;
 
 /// Functions.

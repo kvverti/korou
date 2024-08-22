@@ -1,5 +1,9 @@
-use crate::{span::{Spanned, Span}, tokens::QualifiedIdent, token::TokenKind, diagnostic::Diagnostics};
-
+use crate::{
+    diagnostic::Diagnostics,
+    span::{Span, Spanned},
+    token::TokenKind,
+    tokens::QualifiedIdent,
+};
 
 impl<'a> Parser<'a> {
     /// Parses a qualified identifier from the next tokens.
@@ -33,7 +37,7 @@ use super::Parser;
 
 #[cfg(test)]
 mod tests {
-    use crate::{cache::StringCache, tokenizer::Tokenizer, parse::declare_idents};
+    use crate::{cache::StringCache, parse::declare_idents, tokenizer::Tokenizer};
 
     use super::*;
 

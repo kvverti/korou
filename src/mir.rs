@@ -1,4 +1,3 @@
-
 // "bytecode w/ metadata" format
 // - function / closure bodies are lists of operations
 // - operations are typed
@@ -59,7 +58,7 @@ pub enum Value {
 // }
 pub struct Closure {
     // includes parameters and simple `let`-bindings
-    locals: Vec</* typed value */()>,
+    locals: Vec</* typed value */ ()>,
     code: Vec<Opcode>,
 }
 

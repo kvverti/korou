@@ -27,7 +27,10 @@ impl<'a> Parser<'a> {
         self.tz
             .expect_one_of(kind)
             .map_err(|tkn| {
-                self.ds.error(Token::span(&tkn), format!("Expected this token: `{:?}`", kind));
+                self.ds.error(
+                    Token::span(&tkn),
+                    format!("Expected this token: `{:?}`", kind),
+                );
             })
             .ok()
     }

@@ -1,4 +1,4 @@
-use crate::{ast::Expr, token::TokenKind, span::Spanned};
+use crate::{ast::Expr, span::Spanned, token::TokenKind};
 
 use super::Parser;
 
@@ -45,12 +45,18 @@ impl<'a> Parser<'a> {
             match *op_token {
                 TokenKind::Member => {
                     let (_, rhs) = self.ident()?.into_span_value();
-                    expr = Expr::Member { recv: Box::new(expr), member: rhs }
+                    expr = Expr::Member {
+                        recv: Box::new(expr),
+                        member: rhs,
+                    }
                 }
                 TokenKind::RoundL => {
                     // todo: arguments
                     self.expect(TokenKind::RoundR)?;
-                    expr = Expr::Call { func: Box::new(expr), args: Vec::new() }
+                    expr = Expr::Call {
+                        func: Box::new(expr),
+                        args: Vec::new(),
+                    }
                 }
                 kind => unreachable!("Unknown free operator token {kind:?}"),
             }
@@ -75,7 +81,12 @@ impl<'a> Parser<'a> {
         while self.consume(*op_token).is_some() {
             operands.push(self.free_binary_expr()?);
         }
-        Some(Expr::Binary { op: (*op_token).try_into().expect("Operator token is not an operator"), operands })
+        Some(Expr::Binary {
+            op: (*op_token)
+                .try_into()
+                .expect("Operator token is not an operator"),
+            operands,
+        })
     }
 
     /// Block-based expressions include:
