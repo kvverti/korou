@@ -1,4 +1,4 @@
-use super::{Effect, Statement, TypedIdent};
+use super::{Effect, Statement, TypedIdent, Type};
 use crate::{span::Span, tokens::Ident};
 
 /// A concrete function.
@@ -16,6 +16,7 @@ pub struct FunctionHeader {
     pub effect_params: Vec<Ident>,
     pub params: Vec<TypedIdent>,
     pub effects: Vec<Effect>,
+    pub ret: Option<Type>,
 }
 
 /// An item in the global or a namespace scope.

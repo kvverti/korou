@@ -2,7 +2,7 @@
 
 mod effect;
 mod expr;
-mod func;
+mod item;
 mod generic;
 mod handler;
 mod ident;
@@ -11,7 +11,7 @@ mod statement;
 mod types;
 
 pub use expr::Expr;
-pub use func::{Func, FuncHeader};
+pub use item::{Function, FunctionHeader, Item};
 pub use generic::{TypeParam, TypedIdent};
 pub use handler::EffectHandler;
 pub use ident::{Ident, QualifiedIdent};
