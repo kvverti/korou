@@ -1,4 +1,4 @@
-use super::{BaseType, Func, Statement, Type};
+use super::{Func, Statement, Type, Effect};
 use crate::tokens::QualifiedIdent;
 
 // effect foo {
@@ -17,7 +17,7 @@ use crate::tokens::QualifiedIdent;
 pub struct EffectHandler {
     pub effect_name: QualifiedIdent,
     pub type_args: Vec<Type>,
-    pub effect_args: Vec<BaseType>,
+    pub effect_args: Vec<Effect>,
     pub handlers: Vec<Func>,
     pub ret: Option<Func>,
     pub finally: Vec<Statement>,
