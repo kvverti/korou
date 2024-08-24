@@ -35,10 +35,11 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Number | TokenKind::BasePrefixNumber => {
                 // integer literal
-                let (span, int) = self.integer().into_span_value();
-                int.map(Expr::Int).unwrap_or(Expr::Error { err_span: span })
+                let (_, int) = self.integer().into_span_value();
+                Expr::Int(int)
             }
             _ => {
+                self.advance();
                 let err_span = Token::span(&token);
                 self.ds.add(Code::Unexpected, err_span, *token);
                 Expr::Error { err_span }
@@ -58,19 +59,17 @@ impl<'a> Parser<'a> {
         {
             match op_token {
                 TokenKind::Member => {
-                    let (span, rhs) = self.ident().into_span_value();
-                    expr = match rhs {
-                        Some(rhs) => Expr::Member {
-                            recv: Box::new(expr),
-                            member: rhs,
-                        },
-                        None => Expr::Error { err_span: span },
+                    let (_, rhs) = self.ident().into_span_value();
+                    expr = Expr::Member {
+                        recv: Box::new(expr),
+                        member: rhs,
                     }
                 }
                 TokenKind::RoundL => {
                     let mut arguments_parser =
                         combinators::comma_sequence(Self::block_expr, &[TokenKind::RoundR]);
                     let args = arguments_parser(self);
+                    self.expect(TokenKind::RoundR);
                     expr = Expr::Call {
                         func: Box::new(expr),
                         args,
@@ -110,9 +109,6 @@ impl<'a> Parser<'a> {
     /// Parses a name and type pair.
     pub fn name_and_type(&mut self) -> Spanned<Option<TypedIdent>> {
         let (name_span, name) = self.ident().into_span_value();
-        let Some(name) = name else {
-            return Spanned::from_span_value(name_span, None);
-        };
         if self.expect(TokenKind::Colon).is_none() {
             return Spanned::from_span_value(name_span, None);
         }
@@ -125,11 +121,14 @@ impl<'a> Parser<'a> {
     pub fn closure_body(&mut self) -> Expr {
         let params = if *self.tz.peek2() == TokenKind::Colon {
             // parameters exist
-            combinators::comma_sequence(Self::name_and_type, &[TokenKind::Arrow])(self)
-                .into_iter()
-                .map(|v| v.into_span_value().1)
-                .collect::<Option<Vec<_>>>()
-                .unwrap_or_default()
+            let params =
+                combinators::comma_sequence(Self::name_and_type, &[TokenKind::Arrow])(self)
+                    .into_iter()
+                    .map(|v| v.into_span_value().1)
+                    .collect::<Option<Vec<_>>>()
+                    .unwrap_or_default();
+            self.expect(TokenKind::Arrow);
+            params
         } else {
             Vec::new()
         };

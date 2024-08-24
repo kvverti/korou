@@ -9,18 +9,18 @@ use super::Parser;
 /// Holds parsing functions for atoms.
 impl<'a> Parser<'a> {
     /// Parses an identifier from the next token.
-    pub(super) fn ident(&mut self) -> Spanned<Option<Ident>> {
+    pub(super) fn ident(&mut self) -> Spanned<Ident> {
         let (span, kind) = self.expect(TokenKind::Ident).into_span_value();
         if kind.is_none() {
-            Spanned::from_span_value(span, None)
+            Spanned::from_span_value(span, Ident::Error)
         } else {
             let key = self.cache.intern(self.tz.src_for(span));
-            Spanned::from_span_value(span, Some(Ident(key)))
+            Spanned::from_span_value(span, Ident::Ident(key))
         }
     }
 
     /// Parses an integer from the next token.
-    pub(super) fn integer(&mut self) -> Spanned<Option<Integer>> {
+    pub(super) fn integer(&mut self) -> Spanned<Integer> {
         let (span, t) = self.tz.next().into_span_value();
         let (src, radix) = match t {
             TokenKind::Number => (self.tz.src_for(span), 10),
@@ -33,15 +33,14 @@ impl<'a> Parser<'a> {
                     "0b" | "0B" => 2,
                     _ => {
                         self.ds.add(Code::InvalidIntegerBase, span, base);
-                        return Spanned::from_span_value(span, None);
+                        return Spanned::from_span_value(span, Integer::Error);
                     }
                 };
                 (src, radix)
             }
             _ => {
-                self.ds
-                    .add(Code::Unexpected, span, TokenKind::Number);
-                return Spanned::from_span_value(span, None);
+                self.ds.add(Code::Unexpected, span, TokenKind::Number);
+                return Spanned::from_span_value(span, Integer::Error);
             }
         };
         let num = i64::from_str_radix(src, radix)
@@ -51,14 +50,14 @@ impl<'a> Parser<'a> {
                 _ => unreachable!("Unexpected error: {:?}; on input: {} r {}", err, src, radix),
             })
             .ok();
-        Spanned::from_span_value(span, num.map(Integer))
+        Spanned::from_span_value(span, num.map(Integer::Integer).unwrap_or(Integer::Error))
     }
 }
 
 #[cfg(test)]
 macro_rules! atom {
-    (int $n:literal) => { $crate::ast::Integer($n) };
-    ($id:ident) => { $crate::ast::Ident($id) };
+    (int $n:literal) => { $crate::ast::Integer::Integer($n) };
+    ($id:ident) => { $crate::ast::Ident::Ident($id) };
     ($bgn:literal .. $end:literal : $($v:tt)*) => {
         $crate::span::Spanned::from_span_value(
             ($bgn .. $end).into(),
@@ -71,7 +70,7 @@ pub(crate) use atom;
 
 #[cfg(test)]
 mod tests {
-    use crate::{cache::StringCache, diagnostic::Diagnostics, tokenizer::Tokenizer};
+    use crate::{cache::StringCache, diagnostic::Diagnostics, span::Span, tokenizer::Tokenizer};
 
     use super::*;
 
@@ -88,26 +87,18 @@ mod tests {
         };
 
         let expected = atom!(0..5: hello);
-        assert_eq!(
-            expected,
-            Spanned::map(parser.ident(), |v| v.expect("ident"))
-        );
+        assert_eq!(expected, parser.ident());
         assert!(!parser.ds.has_errors());
 
         let expected = atom!(6..8: int 17);
-        assert_eq!(
-            expected,
-            Spanned::map(parser.integer(), |v| v.expect("integer1"))
-        );
+        assert_eq!(expected, parser.integer());
         assert!(!parser.ds.has_errors());
 
         let expected = atom!(9..14: int 0xc3f);
-        assert_eq!(
-            expected,
-            Spanned::map(parser.integer(), |v| v.expect("integer2"))
-        );
+        assert_eq!(expected, parser.integer());
         assert!(!parser.ds.has_errors());
 
-        assert!(parser.integer().is_none());
+        let expected = Spanned::from_span_value(Span { pos: 15, len: 4 }, Integer::Error);
+        assert_eq!(expected, parser.integer());
     }
 }

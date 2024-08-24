@@ -10,20 +10,9 @@ impl<'a> Parser<'a> {
     pub(super) fn qualified_ident(&mut self) -> Spanned<Expr> {
         let mut paths = Vec::new();
         let (mut span, id) = self.ident().into_span_value();
-        let Some(id) = id else {
-            return Spanned::from_span_value(span, Expr::Error { err_span: span });
-        };
         paths.push(id);
         while self.consume(TokenKind::Scope).is_some() {
             let (next_span, id) = self.ident().into_span_value();
-            let Some(id) = id else {
-                return Spanned::from_span_value(
-                    span,
-                    Expr::Error {
-                        err_span: next_span,
-                    },
-                );
-            };
             paths.push(id);
             Span::expand(&mut span, next_span);
         }

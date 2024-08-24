@@ -9,6 +9,7 @@ use crate::tokenizer::Tokenizer;
 mod atoms;
 mod combinators;
 mod expr;
+mod item;
 mod paths;
 mod statement;
 mod types;
@@ -63,7 +64,7 @@ impl<'a> Parser<'a> {
 macro_rules! declare_idents {
     ($cache:ident; $($ids:ident)*) => {
         $(
-            let $ids = $crate::ast::Ident($cache.intern(stringify!($ids)));
+            let $ids = $crate::ast::Ident::Ident($cache.intern(stringify!($ids)));
         )*
     };
 }

@@ -35,12 +35,13 @@ impl Parser<'_> {
                 // continuation type
                 self.advance();
                 let args = combinators::comma_sequence(Self::ty, &[TokenKind::RoundR])(self);
+                self.expect(TokenKind::RoundR);
                 let effects = if self.consume(TokenKind::Slash).is_some() {
                     combinators::comma_sequence(Self::effect, &[TokenKind::Arrow])(self)
                 } else {
-                    self.expect(TokenKind::Arrow);
                     Vec::new()
                 };
+                self.expect(TokenKind::Arrow);
                 // check for a return type
                 let ret = matches!(
                     *self.tz.peek(),
@@ -56,7 +57,9 @@ impl Parser<'_> {
                     return Type::Error { err_span: span };
                 };
                 let args = if self.consume(TokenKind::SquareL).is_some() {
-                    combinators::comma_sequence(Self::ty, &[TokenKind::SquareR])(self)
+                    let args = combinators::comma_sequence(Self::ty, &[TokenKind::SquareR])(self);
+                    self.expect(TokenKind::SquareR);
+                    args
                 } else {
                     Vec::new()
                 };

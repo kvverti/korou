@@ -17,6 +17,7 @@ impl Parser<'_> {
                 let mut cont_args = combinators::comma_sequence(Self::binary_expr, &[TokenKind::Semi]);
                 let cont = self.free_binary_expr();
                 let args = cont_args(self);
+                self.expect(TokenKind::Semi);
                 Statement::Continue { cont, args }
             }
             TokenKind::Let => {
@@ -27,6 +28,7 @@ impl Parser<'_> {
                     .map(|v| v.into_span_value().1)
                     .collect::<Option<Vec<_>>>()
                     .unwrap_or_default();
+                self.expect(TokenKind::Equals);
                 let init = self.block_expr();
                 self.expect(TokenKind::Semi);
                 Statement::Let { bindings, init }

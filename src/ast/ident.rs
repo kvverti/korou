@@ -4,7 +4,10 @@ use crate::cache::StringKey;
 
 /// Identifier.
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
-pub struct Ident(pub StringKey);
+pub enum Ident {
+    Ident(StringKey),
+    Error,
+}
 
 /// Qualified identifier.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -18,6 +21,6 @@ impl From<Ident> for QualifiedIdent {
 
 impl From<StringKey> for QualifiedIdent {
     fn from(v: StringKey) -> Self {
-        Self(vec![Ident(v)])
+        Self(vec![Ident::Ident(v)])
     }
 }
