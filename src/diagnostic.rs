@@ -48,11 +48,11 @@ impl Diagnostics {
     }
 
     /// Adds a diagnostic with the given span and context.
-    pub fn add(&mut self, code: Code, span: Span, context: impl Into<String>) {
+    pub fn add(&mut self, code: Code, span: Span, context: impl ToString) {
         self.diagnostics.push(Diagnostic {
             code,
             span,
-            context: context.into(),
+            context: context.to_string(),
         })
     }
 

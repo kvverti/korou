@@ -11,5 +11,5 @@ pub struct TypeParam {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TypedIdent {
     pub name: Ident,
-    pub typ: Type,
+    pub ty: Type,
 }

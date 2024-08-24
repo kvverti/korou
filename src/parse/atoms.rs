@@ -40,7 +40,7 @@ impl<'a> Parser<'a> {
             }
             _ => {
                 self.ds
-                    .add(Code::Unexpected, span, format!("{:?}", TokenKind::Number));
+                    .add(Code::Unexpected, span, TokenKind::Number);
                 return Spanned::from_span_value(span, None);
             }
         };

@@ -11,6 +11,7 @@ mod combinators;
 mod expr;
 mod paths;
 mod statement;
+mod types;
 
 pub struct Parser<'a> {
     pub tz: Tokenizer<'a>,
@@ -29,7 +30,7 @@ impl<'a> Parser<'a> {
         match self.tz.expect_one_of(kind) {
             Ok(token) => Token::map(token, Some),
             Err(token) => {
-                self.ds.add(Code::Unexpected, Token::span(&token), format!("{:?}", *token));
+                self.ds.add(Code::Unexpected, Token::span(&token), *token);
                 Spanned::map(token, |_| None)
             }
         }

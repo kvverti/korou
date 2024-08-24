@@ -1,3 +1,6 @@
+
+use arraydeque::ArrayDeque;
+
 use crate::cache::StringKey;
 use crate::span::Span;
 use crate::token::{Token, TokenKind};
@@ -10,8 +13,7 @@ pub struct Tokenizer<'a> {
     file: StringKey,
     base: &'a str,
     src: &'a str,
-    /// Peeked token
-    next: Option<Token>,
+    lookahead: ArrayDeque<Token, 2>,
 }
 
 impl<'a> Tokenizer<'a> {
@@ -21,7 +23,7 @@ impl<'a> Tokenizer<'a> {
             file,
             src,
             base: src,
-            next: None,
+            lookahead: ArrayDeque::new(),
         }
     }
 
@@ -30,37 +32,42 @@ impl<'a> Tokenizer<'a> {
         self.src = self.src.trim_start();
     }
 
-    /// Constructs a span of the given number of bytes.
-    fn make_span(&self, offset: usize) -> Span {
-        Span {
-            pos: self.base.len() - self.src.len(),
-            len: offset,
-        }
-    }
-
     fn next_token(&mut self) -> Token {
         self.consume_ws();
         let (kind, end) = rules::RULES
             .iter()
             .find_map(|&rule| rule(self.src))
             .unwrap_or_else(|| rules::unrecognized_char(self.src));
-        Token::from_span_value(self.make_span(end), kind)
+        let span = Span {
+            pos: self.base.len() - self.src.len(),
+            len: end,
+        };
+        self.src = &self.src[end..];
+        Token::from_span_value(span, kind)
     }
 
     /// Gets the next token without advancing the tokenizer.
     pub fn peek(&mut self) -> Token {
-        if let Some(tkn) = self.next {
-            return tkn;
+        if let Some(tkn) = self.lookahead.front() {
+            return *tkn;
         }
         let tkn = self.next_token();
-        *self.next.insert(tkn)
+        self.lookahead.push_back(tkn).expect("Lookahead has free capacity");
+        tkn
+    }
+
+    /// Gets the second next token without advancing the tokenizer.
+    pub fn peek2(&mut self) -> Token {
+        while self.lookahead.len() < 2 {
+            let tkn = self.next_token();
+            self.lookahead.push_back(tkn).expect("Lookahead has free capacity");
+        }
+        self.lookahead[1]
     }
 
     /// Gets the next token and advances the tokenizer.
     pub fn next(&mut self) -> Token {
-        let tkn = self.next.take().unwrap_or_else(|| self.next_token());
-        self.src = &self.src[Token::span(&tkn).len..];
-        tkn
+        self.lookahead.pop_front().unwrap_or_else(|| self.next_token())
     }
 
     /// Gets the next token, advances the tokenizer, and tests the token's kind against the given kind.
@@ -170,5 +177,26 @@ mod tests {
         assert_eq!(expected, tokenizer.peek());
         assert_eq!(expected, tokenizer.next());
         assert_eq!(expected, tokenizer.next());
+    }
+
+    #[test]
+    fn advances2() {
+        let mut cache = StringCache::new();
+        let file_name = cache.intern("mysource.ku");
+        let mut tokenizer = Tokenizer::from_parts(file_name, "foo bar");
+
+        let expected1 = Token::from_span_value(Span { pos: 0, len: 3 }, TokenKind::Ident);
+        let expected2 = Token::from_span_value(Span { pos: 4, len: 3 }, TokenKind::Ident);
+        let expected3 = Token::from_span_value(Span { pos: 7, len: 0 }, TokenKind::Eof);
+
+        assert_eq!(expected1, tokenizer.peek());
+        assert_eq!(expected1, tokenizer.next());
+        assert_eq!(expected3, tokenizer.peek2());
+        assert_eq!(expected2, tokenizer.peek());
+        assert_eq!(expected3, tokenizer.peek2());
+        assert_eq!(expected3, tokenizer.peek2());
+        assert_eq!(expected2, tokenizer.next());
+        assert_eq!(expected3, tokenizer.peek());
+        assert_eq!(expected3, tokenizer.next());
     }
 }

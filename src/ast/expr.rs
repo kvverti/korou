@@ -1,5 +1,8 @@
 use super::{EffectHandler, Integer, Statement, TypedIdent};
-use crate::{tokens::{Ident, Operator, QualifiedIdent}, span::Span};
+use crate::{
+    span::Span,
+    tokens::{Ident, Operator, QualifiedIdent},
+};
 
 /// Expressions.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -27,9 +30,11 @@ pub enum Expr {
         /// The arguments to the function.
         args: Vec<Expr>,
     },
-    /// Resumption
-    #[deprecated] // resume is now a function
-    Resume(Vec<Expr>),
+    /// Block-based function call.
+    BlockCall {
+        func: Box<Expr>,
+        args: Vec<Expr>,
+    },
     Closure {
         params: Vec<TypedIdent>,
         stmts: Vec<Statement>,
@@ -44,6 +49,9 @@ pub enum Expr {
         else_body: Vec<Statement>,
     },
     Handler(EffectHandler),
+    Do {
+        stmts: Vec<Statement>,
+    },
     DoWith {
         handler: Box<Expr>,
         stmts: Vec<Statement>,
@@ -51,5 +59,14 @@ pub enum Expr {
     /// Error node.
     Error {
         err_span: Span,
+    },
+}
+
+impl Expr {
+    pub fn is_block_expr(&self) -> bool {
+        matches!(
+            *self,
+            Self::BlockCall { .. } | Self::IfThen { .. } | Self::IfElse { .. } | Self::Closure { .. }
+        )
     }
 }

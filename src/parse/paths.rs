@@ -1,7 +1,8 @@
 use crate::{
+    ast::Expr,
     span::{Span, Spanned},
     token::TokenKind,
-    tokens::QualifiedIdent, ast::Expr,
+    tokens::QualifiedIdent,
 };
 
 impl<'a> Parser<'a> {
@@ -16,7 +17,12 @@ impl<'a> Parser<'a> {
         while self.consume(TokenKind::Scope).is_some() {
             let (next_span, id) = self.ident().into_span_value();
             let Some(id) = id else {
-                return Spanned::from_span_value(span, Expr::Error { err_span: next_span })
+                return Spanned::from_span_value(
+                    span,
+                    Expr::Error {
+                        err_span: next_span,
+                    },
+                );
             };
             paths.push(id);
             Span::expand(&mut span, next_span);
@@ -42,7 +48,9 @@ use super::Parser;
 
 #[cfg(test)]
 mod tests {
-    use crate::{cache::StringCache, parse::declare_idents, tokenizer::Tokenizer, diagnostic::Diagnostics};
+    use crate::{
+        cache::StringCache, diagnostic::Diagnostics, parse::declare_idents, tokenizer::Tokenizer,
+    };
 
     use super::*;
 

@@ -40,7 +40,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             ds: &mut ds,
         };
         let expr = parser.block_expr();
-        println!("{:?}", expr);
+        println!("Expr: {:?}", expr);
+        println!("Diagnostics: {:?}", ds);
     }
     Ok(())
 }
