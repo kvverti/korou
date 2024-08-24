@@ -38,7 +38,7 @@ pub enum Type {
     },
     /// A closure type.
     Closure {
-        ret: Option<Box<Type>>,
+        ret: Box<Type>,
         effects: Vec<Effect>,
     },
     Error {
