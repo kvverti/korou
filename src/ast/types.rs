@@ -26,7 +26,7 @@ pub enum Type0 {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Type {
     /// A named (possibly generic) type.
-    Named {
+    Simple {
         name: QualifiedIdent,
         args: Vec<Type>,
     },

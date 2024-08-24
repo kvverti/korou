@@ -52,7 +52,7 @@ impl Parser<'_> {
                 } else {
                     Vec::new()
                 };
-                Type::Named {
+                Type::Simple {
                     name: ty_name,
                     args,
                 }
