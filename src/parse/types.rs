@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expr, Type},
+    ast::{Effect, Expr, Type},
     parse::combinators,
     token::TokenKind,
 };
@@ -7,10 +7,10 @@ use crate::{
 use super::Parser;
 
 impl Parser<'_> {
-    /// Parses a type. Types are:
+    /// Parses a type name. Types are:
     /// Simple: qualident [ type, ..., type ]
-    /// Continuation: ( type, ..., type ) -> type   (todo: effects)
-    /// Closure: { type }   (todo: effects)
+    /// Continuation: ( type, ..., type ) / effect, effect -> type
+    /// Closure: { type } / effect, effect
     pub fn ty(&mut self) -> Type {
         let head_tkn = self.tz.peek();
         match *head_tkn {
@@ -19,27 +19,35 @@ impl Parser<'_> {
                 self.advance();
                 let ret = self.ty();
                 self.expect(TokenKind::CurlyR);
+                let mut effects = Vec::new();
+                if self.consume(TokenKind::Slash).is_some() {
+                    effects.push(self.effect());
+                    while self.consume(TokenKind::Comma).is_some() {
+                        effects.push(self.effect());
+                    }
+                }
                 Type::Closure {
                     ret: Box::new(ret),
-                    effects: Vec::new(),
+                    effects,
                 }
             }
             TokenKind::RoundL => {
                 // continuation type
                 self.advance();
                 let args = combinators::comma_sequence(Self::ty, &[TokenKind::RoundR])(self);
-                self.expect(TokenKind::Arrow);
+                let effects = if self.consume(TokenKind::Slash).is_some() {
+                    combinators::comma_sequence(Self::effect, &[TokenKind::Arrow])(self)
+                } else {
+                    self.expect(TokenKind::Arrow);
+                    Vec::new()
+                };
                 // check for a return type
                 let ret = matches!(
                     *self.tz.peek(),
                     TokenKind::Ident | TokenKind::CurlyL | TokenKind::RoundL
                 )
                 .then(|| Box::new(self.ty()));
-                Type::Continuation {
-                    args,
-                    ret,
-                    effects: Vec::new(),
-                }
+                Type::Continuation { args, ret, effects }
             }
             _ => {
                 // simple type
@@ -57,6 +65,17 @@ impl Parser<'_> {
                     args,
                 }
             }
+        }
+    }
+
+    /// Parses an effect name.
+    pub fn effect(&mut self) -> Effect {
+        // todo: fully design effects
+        let (span, name) = self.qualified_ident().into_span_value();
+        if let Expr::Ident(name) = name {
+            Effect::Effect { name }
+        } else {
+            Effect::Error { err_span: span }
         }
     }
 }

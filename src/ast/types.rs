@@ -46,8 +46,13 @@ pub enum Type {
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
 /// An effect in the AST.
-pub struct Effect {
-    pub name: QualifiedIdent,
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Effect {
+    Effect {
+        name: QualifiedIdent,
+    },
+    Error {
+        err_span: Span,
+    }
 }

@@ -17,7 +17,7 @@ pub use handler::EffectHandler;
 pub use ident::{Ident, QualifiedIdent};
 pub use number::Integer;
 pub use statement::Statement;
-pub use types::{BaseType, Type};
+pub use types::{BaseType, Effect, Type};
 /*
 #[cfg(test)]
 mod tests {
