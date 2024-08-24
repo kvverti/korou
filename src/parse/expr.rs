@@ -12,6 +12,7 @@ impl<'a> Parser<'a> {
     /// This includes:
     /// - qualified identifiers: ident::...::ident
     /// - integer literals: 0xFF
+    /// - keyword literals
     /// - parenthesized expressions: ( blockbased )
     pub fn unary_expr(&mut self) -> Expr {
         let token = self.tz.peek();
@@ -22,6 +23,10 @@ impl<'a> Parser<'a> {
                 let expr = self.block_expr();
                 self.expect(TokenKind::RoundR);
                 expr
+            }
+            TokenKind::Return => {
+                self.advance();
+                Expr::Return
             }
             TokenKind::Ident => {
                 // qualified identifier: ident::ident

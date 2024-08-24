@@ -11,8 +11,10 @@ pub enum Expr {
     Ident(QualifiedIdent),
     /// Simple integer literal.
     Int(Integer),
-    /// The implicit continuation, `k`.
-    K,
+    /// Return literal.
+    Return,
+    /// The implicit continuation.
+    Continue,
     /// A binary expression of a single operator
     Binary {
         op: Operator,
