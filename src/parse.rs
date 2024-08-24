@@ -59,6 +59,7 @@ impl<'a> Parser<'a> {
 }
 
 /// Shorthand for declaring many identifiers.
+#[cfg(test)]
 macro_rules! declare_idents {
     ($cache:ident; $($ids:ident)*) => {
         $(
@@ -66,4 +67,5 @@ macro_rules! declare_idents {
         )*
     };
 }
+#[cfg(test)]
 pub(crate) use declare_idents;

@@ -55,6 +55,7 @@ impl<'a> Parser<'a> {
     }
 }
 
+#[cfg(test)]
 macro_rules! atom {
     (int $n:literal) => { $crate::ast::Integer($n) };
     ($id:ident) => { $crate::ast::Ident($id) };
@@ -65,6 +66,7 @@ macro_rules! atom {
         )
     };
 }
+#[cfg(test)]
 pub(crate) use atom;
 
 #[cfg(test)]

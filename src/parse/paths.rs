@@ -31,6 +31,7 @@ impl<'a> Parser<'a> {
     }
 }
 
+#[cfg(test)]
 macro_rules! qident {
     ($($components:ident)::*) => {
         $crate::ast::Expr::Ident($crate::ast::QualifiedIdent(vec![$($components),*]))
@@ -42,6 +43,7 @@ macro_rules! qident {
         )
     }
 }
+#[cfg(test)]
 pub(crate) use qident;
 
 use super::Parser;
