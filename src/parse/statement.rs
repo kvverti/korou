@@ -19,6 +19,18 @@ impl Parser<'_> {
                 let args = cont_args(self);
                 Statement::Continue { cont, args }
             }
+            TokenKind::Let => {
+                // let statement
+                self.advance();
+                let bindings = combinators::comma_sequence(Self::name_and_type, &[TokenKind::Equals])(self)
+                    .into_iter()
+                    .map(|v| v.into_span_value().1)
+                    .collect::<Option<Vec<_>>>()
+                    .unwrap_or_default();
+                let init = self.block_expr();
+                self.expect(TokenKind::Semi);
+                Statement::Let { bindings, init }
+            }
             _ => {
                 // expression statement
                 let expr = self.block_expr();
