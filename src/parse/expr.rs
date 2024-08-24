@@ -189,17 +189,17 @@ impl<'a> Parser<'a> {
             }
             _ => {
                 // block function call or fallthrough
-                let mut expr = self.binary_expr();
+                let expr = self.binary_expr();
                 if !matches!(expr, Expr::Binary { .. }) && self.consume(TokenKind::CurlyL).is_some()
                 {
                     let block_arg = self.closure_body();
                     self.expect(TokenKind::CurlyR);
                     // determine whether we can add this argument to an existing function call
-                    if let Expr::Call { ref mut args, .. } = expr {
+                    if let Expr::Call { func, mut args } = expr {
                         args.push(block_arg);
-                        expr
+                        Expr::BlockCall { func, args }
                     } else {
-                        Expr::Call {
+                        Expr::BlockCall {
                             func: Box::new(expr),
                             args: vec![block_arg],
                         }

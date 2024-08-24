@@ -39,8 +39,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             cache: &mut cache,
             ds: &mut ds,
         };
-        let expr = parser.block_expr();
-        println!("Expr: {:?}", expr);
+        let output = parser.stmt();
+        println!("Output: {:?}", output);
         println!("Diagnostics: {:?}", ds);
     }
     Ok(())
