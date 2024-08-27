@@ -31,7 +31,7 @@ impl<'a> Parser<'a> {
             TokenKind::Ident => {
                 // qualified identifier: ident::ident
                 let (_, qid) = self.qualified_ident().into_span_value();
-                qid
+                Expr::Ident(qid)
             }
             TokenKind::Number | TokenKind::BasePrefixNumber => {
                 // integer literal

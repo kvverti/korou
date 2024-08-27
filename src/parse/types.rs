@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Effect, Expr, Type},
+    ast::{Effect, Type},
     parse::combinators,
     token::TokenKind,
 };
@@ -52,10 +52,7 @@ impl Parser<'_> {
             }
             _ => {
                 // simple type
-                let (span, ty_name) = self.qualified_ident().into_span_value();
-                let Expr::Ident(ty_name) = ty_name else {
-                    return Type::Error { err_span: span };
-                };
+                let (_, ty_name) = self.qualified_ident().into_span_value();
                 let args = if self.consume(TokenKind::SquareL).is_some() {
                     let args = combinators::comma_sequence(Self::ty, &[TokenKind::SquareR])(self);
                     self.expect(TokenKind::SquareR);
@@ -71,14 +68,32 @@ impl Parser<'_> {
         }
     }
 
-    /// Parses an effect name.
+    /// Parses an effect.
+    /// effect ident [ ty, ..., ty ]
     pub fn effect(&mut self) -> Effect {
-        // todo: fully design effects
-        let (span, name) = self.qualified_ident().into_span_value();
-        if let Expr::Ident(name) = name {
-            Effect::Effect { name }
-        } else {
-            Effect::Error { err_span: span }
+        let mut effect_seq = Vec::new();
+        loop {
+            let (_, name) = self.qualified_ident().into_span_value();
+            // generic arguments
+            let args = if self.consume(TokenKind::SquareL).is_some() {
+                let args = combinators::comma_sequence(Self::ty, &[TokenKind::SquareR])(self);
+                self.expect(TokenKind::SquareR);
+                args
+            } else {
+                Vec::new()
+            };
+            effect_seq.push(Effect {
+                name,
+                args,
+                meta_effects: Vec::new(),
+            });
+            // note: we assume that an effect must begin with an ident token
+            if *self.tz.peek() != TokenKind::Ident {
+                break;
+            }
         }
+        let mut base_effect = effect_seq.pop().expect("Effect loop is always run at least once.");
+        base_effect.meta_effects = effect_seq;
+        base_effect
     }
 }

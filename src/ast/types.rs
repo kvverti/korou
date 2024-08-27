@@ -28,11 +28,8 @@ pub enum Type {
 
 /// An effect in the AST.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Effect {
-    Effect {
-        name: QualifiedIdent,
-    },
-    Error {
-        err_span: Span,
-    }
+pub struct Effect {
+    pub name: QualifiedIdent,
+    pub args: Vec<Type>,
+    pub meta_effects: Vec<Effect>,
 }

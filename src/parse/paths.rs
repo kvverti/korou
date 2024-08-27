@@ -1,5 +1,4 @@
 use crate::{
-    ast::Expr,
     span::{Span, Spanned},
     token::TokenKind,
     tokens::QualifiedIdent,
@@ -7,7 +6,7 @@ use crate::{
 
 impl<'a> Parser<'a> {
     /// Parses a qualified identifier from the next tokens.
-    pub(super) fn qualified_ident(&mut self) -> Spanned<Expr> {
+    pub(super) fn qualified_ident(&mut self) -> Spanned<QualifiedIdent> {
         let mut paths = Vec::new();
         let (mut span, id) = self.ident().into_span_value();
         paths.push(id);
@@ -16,14 +15,14 @@ impl<'a> Parser<'a> {
             paths.push(id);
             Span::expand(&mut span, next_span);
         }
-        Spanned::from_span_value(span, Expr::Ident(QualifiedIdent(paths)))
+        Spanned::from_span_value(span, QualifiedIdent(paths))
     }
 }
 
 #[cfg(test)]
 macro_rules! qident {
     ($($components:ident)::*) => {
-        $crate::ast::Expr::Ident($crate::ast::QualifiedIdent(vec![$($components),*]))
+        $crate::ast::QualifiedIdent(vec![$($components),*])
     };
     ($bgn:literal .. $end:literal : $($ts:tt)*) => {
         $crate::span::Spanned::from_span_value(
