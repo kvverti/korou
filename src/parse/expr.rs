@@ -173,11 +173,21 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Do => {
                 // do expression (immediately invoked nullary closure)
+                // or do-with expression (bind effect handler)
                 self.advance();
                 self.expect(TokenKind::CurlyL);
                 let stmts = self.block_stmts();
                 self.expect(TokenKind::CurlyR);
-                Expr::Do { stmts }
+                if self.consume(TokenKind::With).is_none() {
+                    // do-expression
+                    return Expr::Do { stmts };
+                }
+                // do-with expression
+                let handler = self.block_expr();
+                Expr::DoWith {
+                    stmts,
+                    handler: Box::new(handler),
+                }
             }
             TokenKind::CurlyL => {
                 // closure

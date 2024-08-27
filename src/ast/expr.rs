@@ -58,8 +58,8 @@ pub enum Expr {
         stmts: Vec<Statement>,
     },
     DoWith {
-        handler: Box<Expr>,
         stmts: Vec<Statement>,
+        handler: Box<Expr>,
     },
     /// Error node.
     Error {
@@ -68,14 +68,17 @@ pub enum Expr {
 }
 
 impl Expr {
+    /// Determines whether this expression ends with a block.
     pub fn is_block_expr(&self) -> bool {
-        matches!(
-            *self,
+        match self {
             Self::BlockCall { .. }
-                | Self::IfThen { .. }
-                | Self::IfElse { .. }
-                | Self::Closure { .. }
-                | Self::Handler { .. }
-        )
+            | Self::IfThen { .. }
+            | Self::IfElse { .. }
+            | Self::Closure { .. }
+            | Self::Handler { .. }
+            | Self::Do { .. } => true,
+            Self::DoWith { handler, .. } => handler.is_block_expr(),
+            _ => false,
+        }
     }
 }
