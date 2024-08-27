@@ -23,6 +23,9 @@ pub struct FunctionHeader {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Item {
     Function(Function),
+    Finally {
+        stmts: Vec<Statement>,
+    },
     Error {
         err_span: Span,
     },

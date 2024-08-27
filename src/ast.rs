@@ -13,7 +13,6 @@ mod types;
 pub use expr::Expr;
 pub use item::{Function, FunctionHeader, Item};
 pub use generic::{TypeParam, TypedIdent};
-pub use handler::EffectHandler;
 pub use ident::{Ident, QualifiedIdent};
 pub use number::Integer;
 pub use statement::Statement;

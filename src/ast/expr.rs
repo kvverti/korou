@@ -1,4 +1,4 @@
-use super::{EffectHandler, Integer, Statement, TypedIdent};
+use super::{Effect, Integer, Item, Statement, TypedIdent};
 use crate::{
     span::Span,
     tokens::{Ident, Operator, QualifiedIdent},
@@ -50,7 +50,10 @@ pub enum Expr {
         then_body: Vec<Statement>,
         else_body: Vec<Statement>,
     },
-    Handler(EffectHandler),
+    Handler {
+        impl_effects: Vec<Effect>,
+        items: Vec<Item>,
+    },
     Do {
         stmts: Vec<Statement>,
     },
@@ -68,7 +71,11 @@ impl Expr {
     pub fn is_block_expr(&self) -> bool {
         matches!(
             *self,
-            Self::BlockCall { .. } | Self::IfThen { .. } | Self::IfElse { .. } | Self::Closure { .. }
+            Self::BlockCall { .. }
+                | Self::IfThen { .. }
+                | Self::IfElse { .. }
+                | Self::Closure { .. }
+                | Self::Handler { .. }
         )
     }
 }

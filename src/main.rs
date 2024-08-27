@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             cache: &mut cache,
             ds: &mut ds,
         };
-        let output = parser.function();
+        let output = parser.stmt();
         println!("Output: {:?}", output);
         println!("Diagnostics: {:?}", ds);
     }

@@ -1,12 +1,33 @@
 use crate::{
     ast::{Function, FunctionHeader, Item},
     parse::combinators,
-    token::TokenKind,
+    token::{Token, TokenKind},
 };
 
 use super::Parser;
 
 impl Parser<'_> {
+    /// A top-level or nested item.
+    pub fn item(&mut self) -> Item {
+        let head_tkn = self.tz.peek();
+        match *head_tkn {
+            TokenKind::Fn => self.function(),
+            TokenKind::Finally => {
+                self.advance();
+                self.expect(TokenKind::CurlyL);
+                let stmts = self.block_stmts();
+                self.expect(TokenKind::CurlyR);
+                Item::Finally { stmts }
+            }
+            _ => {
+                self.advance();
+                Item::Error {
+                    err_span: Token::span(&head_tkn),
+                }
+            }
+        }
+    }
+
     /// Parses a function header. A function header must end in either ; or {
     /// fn name [ ident, ..., ident | ident, ..., ident ] ( nameandtype , ... , nameandtype ) / effect, ..., effect -> type
     pub fn function_header(&mut self) -> FunctionHeader {

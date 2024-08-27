@@ -142,6 +142,7 @@ impl<'a> Parser<'a> {
     /// - do: do { block }
     /// - closure: { args -> block }
     /// - block-based function call: unary { args -> block }
+    /// - handle expression: handle effect, ..., effect { function-or-finally }
     /// - any binary expression: binary
     pub fn block_expr(&mut self) -> Expr {
         let head_tkn = self.tz.peek();
@@ -180,11 +181,23 @@ impl<'a> Parser<'a> {
             }
             TokenKind::CurlyL => {
                 // closure
-                // todo: arguments
                 self.advance();
                 let closure = self.closure_body();
                 self.expect(TokenKind::CurlyR);
                 closure
+            }
+            TokenKind::Handle => {
+                // handler
+                self.advance();
+                let impl_effects =
+                    combinators::comma_sequence(Self::effect, &[TokenKind::CurlyL])(self);
+                self.expect(TokenKind::CurlyL);
+                let items = combinators::many(Self::item, &[TokenKind::CurlyR])(self);
+                self.expect(TokenKind::CurlyR);
+                Expr::Handler {
+                    impl_effects,
+                    items,
+                }
             }
             _ => {
                 // block function call or fallthrough
