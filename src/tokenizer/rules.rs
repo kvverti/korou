@@ -72,6 +72,6 @@ pub fn eof(src: &str) -> Option<(TokenKind, usize)> {
 }
 
 pub fn unrecognized_char(src: &str) -> (TokenKind, usize) {
-    let end = src.char_indices().nth(1).map(|t| t.0).unwrap_or(src.len());
+    let end = src.chars().next().map(char::len_utf8).unwrap_or(0);
     (TokenKind::Unrecognized, end)
 }
