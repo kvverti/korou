@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expr, TypedIdent},
+    ast::{Conditional, Expr, TypedIdent},
     diagnostic::Code,
     span::Spanned,
     token::{Token, TokenKind},
@@ -137,8 +137,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Block-based expressions include:
-    /// - if-then: if binary { block }
-    /// - if-then-else: if binary { block } else { block }
+    /// - conditional: if binary { block } else ... else if binary { block } else { block }
     /// - do: do { block }
     /// - closure: { args -> block }
     /// - block-based function call: unary { args -> block }
@@ -150,25 +149,31 @@ impl<'a> Parser<'a> {
             TokenKind::If => {
                 // if-then or if-then-else
                 self.advance();
-                let condition = self.binary_expr();
-                self.expect(TokenKind::CurlyL);
-                let then_body = self.block_stmts();
-                self.expect(TokenKind::CurlyR);
-                match *self.consume(TokenKind::Else) {
-                    Some(_) => {
-                        self.expect(TokenKind::CurlyL);
-                        let else_body = self.block_stmts();
-                        self.expect(TokenKind::CurlyR);
-                        Expr::IfElse {
-                            condition: Box::new(condition),
-                            then_body,
-                            else_body,
-                        }
-                    }
-                    None => Expr::IfThen {
-                        condition: Box::new(condition),
+                let mut cases = Vec::new();
+                loop {
+                    let condition = self.binary_expr();
+                    self.expect(TokenKind::CurlyL);
+                    let then_body = self.block_stmts();
+                    self.expect(TokenKind::CurlyR);
+                    cases.push(Conditional {
+                        condition,
                         then_body,
-                    },
+                    });
+                    if self.consume(TokenKind::Else).is_none() {
+                        // no else block
+                        break Expr::Conditional {
+                            cases,
+                            final_else: Vec::new(),
+                        };
+                    }
+                    if self.consume(TokenKind::If).is_none() {
+                        // final else block
+                        self.expect(TokenKind::CurlyL);
+                        let final_else = self.block_stmts();
+                        self.expect(TokenKind::CurlyR);
+                        break Expr::Conditional { cases, final_else };
+                    }
+                    // otherwise, continue with the next case
                 }
             }
             TokenKind::Do => {

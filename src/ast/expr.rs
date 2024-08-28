@@ -4,6 +4,13 @@ use crate::{
     tokens::{Ident, Operator, QualifiedIdent},
 };
 
+/// A single case in an if-else ladder.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Conditional {
+    pub condition: Expr,
+    pub then_body: Vec<Statement>,
+}
+
 /// Expressions.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Expr {
@@ -41,14 +48,10 @@ pub enum Expr {
         params: Vec<TypedIdent>,
         stmts: Vec<Statement>,
     },
-    IfThen {
-        condition: Box<Expr>,
-        then_body: Vec<Statement>,
-    },
-    IfElse {
-        condition: Box<Expr>,
-        then_body: Vec<Statement>,
-        else_body: Vec<Statement>,
+    Conditional {
+        cases: Vec<Conditional>,
+        /// may be empty
+        final_else: Vec<Statement>,
     },
     Handler {
         impl_effects: Vec<Effect>,
@@ -72,8 +75,7 @@ impl Expr {
     pub fn is_block_expr(&self) -> bool {
         match self {
             Self::BlockCall { .. }
-            | Self::IfThen { .. }
-            | Self::IfElse { .. }
+            | Self::Conditional { .. }
             | Self::Closure { .. }
             | Self::Handler { .. }
             | Self::Do { .. } => true,
