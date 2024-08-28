@@ -23,8 +23,15 @@ pub struct FunctionHeader {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Item {
     Function(Function),
+    AbstractFunction(FunctionHeader),
     Finally {
         stmts: Vec<Statement>,
+    },
+    Effect {
+        name: Ident,
+        type_params: Vec<Ident>,
+        effect_params: Vec<Ident>,
+        body: Vec<Item>,
     },
     Error {
         err_span: Span,

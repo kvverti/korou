@@ -2,6 +2,7 @@ use crate::{
     ast::{Function, FunctionHeader, Item},
     parse::combinators,
     token::{Token, TokenKind},
+    tokens::Ident,
 };
 
 use super::Parser;
@@ -19,6 +20,20 @@ impl Parser<'_> {
                 self.expect(TokenKind::CurlyR);
                 Item::Finally { stmts }
             }
+            TokenKind::Effect => {
+                self.advance();
+                let (_, name) = self.ident().into_span_value();
+                let (type_params, effect_params) = self.generic_params();
+                self.expect(TokenKind::CurlyL);
+                let body = combinators::many(Self::item, &[TokenKind::CurlyR])(self);
+                self.expect(TokenKind::CurlyR);
+                Item::Effect {
+                    name,
+                    type_params,
+                    effect_params,
+                    body,
+                }
+            }
             _ => {
                 self.advance();
                 Item::Error {
@@ -33,32 +48,7 @@ impl Parser<'_> {
     pub fn function_header(&mut self) -> FunctionHeader {
         self.expect(TokenKind::Fn);
         let (_, name) = self.ident().into_span_value();
-
-        let type_params;
-        let effect_params;
-        // type parameters
-        if self.consume(TokenKind::SquareL).is_some() {
-            type_params = combinators::comma_sequence(
-                Self::ident,
-                &[TokenKind::SquareR, TokenKind::Pipe],
-            )(self)
-            .into_iter()
-            .map(|v| v.into_span_value().1)
-            .collect::<Vec<_>>();
-            if self.consume(TokenKind::Pipe).is_some() {
-                effect_params =
-                    combinators::comma_sequence(Self::ident, &[TokenKind::SquareR])(self)
-                        .into_iter()
-                        .map(|v| v.into_span_value().1)
-                        .collect::<Vec<_>>();
-            } else {
-                effect_params = Vec::new();
-            }
-            self.expect(TokenKind::SquareR);
-        } else {
-            type_params = Vec::new();
-            effect_params = Vec::new();
-        }
+        let (type_params, effect_params) = self.generic_params();
 
         // parameters
         self.expect(TokenKind::RoundL);
@@ -91,12 +81,41 @@ impl Parser<'_> {
         }
     }
 
-    /// Parses a function - a function header followed by a block.
+    /// Parses a function - a function header followed by either a semicolon or a block.
     pub fn function(&mut self) -> Item {
         let header = self.function_header();
-        self.expect(TokenKind::CurlyL);
-        let body = self.block_stmts();
-        self.expect(TokenKind::CurlyR);
-        Item::Function(Function { header, body })
+        if self.consume(TokenKind::Semi).is_some() {
+            Item::AbstractFunction(header)
+        } else {
+            self.expect(TokenKind::CurlyL);
+            let body = self.block_stmts();
+            self.expect(TokenKind::CurlyR);
+            Item::Function(Function { header, body })
+        }
+    }
+
+    /// Parses a list of type and effect parameters, including the delimiters.
+    fn generic_params(&mut self) -> (Vec<Ident>, Vec<Ident>) {
+        if self.consume(TokenKind::SquareL).is_some() {
+            let type_params = combinators::comma_sequence(
+                Self::ident,
+                &[TokenKind::SquareR, TokenKind::Pipe],
+            )(self)
+            .into_iter()
+            .map(|v| v.into_span_value().1)
+            .collect::<Vec<_>>();
+            let effect_params = if self.consume(TokenKind::Pipe).is_some() {
+                combinators::comma_sequence(Self::ident, &[TokenKind::SquareR])(self)
+                    .into_iter()
+                    .map(|v| v.into_span_value().1)
+                    .collect::<Vec<_>>()
+            } else {
+                Vec::new()
+            };
+            self.expect(TokenKind::SquareR);
+            (type_params, effect_params)
+        } else {
+            (Vec::new(), Vec::new())
+        }
     }
 }
