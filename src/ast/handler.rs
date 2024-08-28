@@ -1,5 +1,4 @@
-use super::{Function, Statement, Type, Effect};
-use crate::tokens::QualifiedIdent;
+use super::{Effect, Function, QualifiedIdent, Statement, Type};
 
 // effect foo {
 //   fn bar(a: A) -> B;

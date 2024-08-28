@@ -16,7 +16,6 @@ mod span;
 mod symbol;
 mod token;
 mod tokenizer;
-mod tokens;
 
 fn main() -> Result<(), Box<dyn Error>> {
     loop {

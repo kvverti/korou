@@ -1,5 +1,4 @@
-use super::Type;
-use crate::tokens::Ident;
+use super::{Ident, Type};
 
 /// Type or effect parameter.
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -1,6 +1,11 @@
 use std::num::IntErrorKind;
 
-use crate::{ast::Integer, diagnostic::Code, span::Spanned, token::TokenKind, tokens::Ident};
+use crate::{
+    ast::{Ident, Integer},
+    diagnostic::Code,
+    span::Spanned,
+    token::TokenKind,
+};
 
 use super::Parser;
 

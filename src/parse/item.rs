@@ -1,8 +1,7 @@
 use crate::{
-    ast::{Function, FunctionHeader, Item},
+    ast::{Function, FunctionHeader, Ident, Item},
     parse::combinators,
     token::{Token, TokenKind},
-    tokens::Ident,
 };
 
 use super::Parser;

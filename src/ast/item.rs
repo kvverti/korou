@@ -1,5 +1,5 @@
-use super::{Effect, Statement, TypedIdent, Type};
-use crate::{span::Span, tokens::Ident};
+use super::{Effect, Ident, Statement, Type, TypedIdent};
+use crate::span::Span;
 
 /// A concrete function.
 #[derive(Clone, Debug, Eq, PartialEq)]

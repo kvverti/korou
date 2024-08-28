@@ -1,8 +1,5 @@
-use super::{Effect, Integer, Item, Statement, TypedIdent};
-use crate::{
-    span::Span,
-    tokens::{Ident, Operator, QualifiedIdent},
-};
+use super::{Effect, Ident, Integer, Item, QualifiedIdent, Statement, TypedIdent};
+use crate::{span::Span, token::TokenKind};
 
 /// A single case in an if-else ladder.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -81,6 +78,46 @@ impl Expr {
             | Self::Do { .. } => true,
             Self::DoWith { handler, .. } => handler.is_block_expr(),
             _ => false,
+        }
+    }
+}
+
+/// Binary operator.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum Operator {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
+    Eq,
+    NotEq,
+    Gt,
+    Ge,
+    Lt,
+    Le,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct UnexpectedError;
+
+impl TryFrom<TokenKind> for Operator {
+    type Error = UnexpectedError;
+
+    fn try_from(value: TokenKind) -> Result<Self, Self::Error> {
+        match value {
+            TokenKind::Plus => Ok(Self::Add),
+            TokenKind::Minus => Ok(Self::Sub),
+            TokenKind::Star => Ok(Self::Mul),
+            TokenKind::Slash => Ok(Self::Div),
+            TokenKind::Percent => Ok(Self::Rem),
+            TokenKind::DoubleEquals => Ok(Self::Eq),
+            TokenKind::ExclaimEquals => Ok(Self::NotEq),
+            TokenKind::Gt => Ok(Self::Gt),
+            TokenKind::GtEquals => Ok(Self::Ge),
+            TokenKind::Lt => Ok(Self::Lt),
+            TokenKind::LtEquals => Ok(Self::Le),
+            _ => Err(UnexpectedError),
         }
     }
 }

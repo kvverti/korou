@@ -1,5 +1,4 @@
-use super::{FunctionHeader, TypeParam};
-use crate::tokens::Ident;
+use super::{FunctionHeader, Ident, TypeParam};
 
 /// Effect definition.
 #[derive(Clone, Debug, Eq, PartialEq)]

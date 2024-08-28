@@ -1,7 +1,7 @@
 use crate::{
+    ast::QualifiedIdent,
     span::{Span, Spanned},
     token::TokenKind,
-    tokens::QualifiedIdent,
 };
 
 impl<'a> Parser<'a> {
