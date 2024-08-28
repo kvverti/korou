@@ -28,6 +28,10 @@ impl<'a> Parser<'a> {
                 self.advance();
                 Expr::Return
             }
+            TokenKind::CC => {
+                self.advance();
+                Expr::Continue
+            }
             TokenKind::Ident => {
                 // qualified identifier: ident::ident
                 let (_, qid) = self.qualified_ident().into_span_value();

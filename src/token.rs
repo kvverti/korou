@@ -141,7 +141,7 @@ impl TokenKind {
             Self::Handle => "handle",
             Self::If => "if",
             Self::Import => "import",
-            Self::CC => "k",
+            Self::CC => "continue",
             Self::Let => "let",
             Self::Recur => "recur",
             Self::Resume => "resume",
