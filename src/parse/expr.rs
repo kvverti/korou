@@ -54,11 +54,11 @@ impl<'a> Parser<'a> {
     pub fn free_binary_expr(&mut self) -> Expr {
         let mut expr = self.unary_expr();
         while let (_, Some(op_token)) = self
-            .consume_one_of(&[TokenKind::RoundL, TokenKind::Member])
+            .consume_one_of(&[TokenKind::RoundL, TokenKind::Dot])
             .into_span_value()
         {
             match op_token {
-                TokenKind::Member => {
+                TokenKind::Dot => {
                     let (_, rhs) = self.ident().into_span_value();
                     expr = Expr::Member {
                         recv: Box::new(expr),
