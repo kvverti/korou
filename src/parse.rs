@@ -73,41 +73,17 @@ pub(crate) use declare_idents;
 
 #[cfg(test)]
 mod tests {
-    use crate::{cache::{StringCache, StringKey}, diagnostic::Diagnostics, tokenizer::Tokenizer, token::TokenKind};
+    use crate::{
+        cache::{StringCache, StringKey},
+        diagnostic::Diagnostics,
+        token::TokenKind,
+        tokenizer::Tokenizer,
+    };
 
     use super::Parser;
 
-    #[test]
-    fn valid_expressions_smoke() {
-        let exprs = [
-            "1",
-            "a",
-            "a.b",
-            "a.b.c",
-            "a::b",
-            "a::b.c",
-            "f()",
-            "a.f()",
-            "a::b.f()",
-            "a.f().b",
-            "f(1)",
-            "f(1, 2)",
-            "1 + 2",
-            "1 + 2 + 3",
-            "(1 + 2) * 3",
-            "f(1 + 2)",
-            "{}",
-            "{ a }",
-            "{ a; }",
-            "{ a + b }",
-            "{ {} }",
-            "{ {}; }",
-            "if 1 { 2 } else { 3 }",
-            "do { 1 }",
-            "{ x: Int, y: Int -> x + y }",
-        ];
-
-        for input in exprs {
+    pub fn smoke_template<R>(inputs: &[&str], mut parse_fn: impl FnMut(&mut Parser<'_>) -> R) {
+        for input in inputs {
             let mut cache = StringCache::new();
             let mut ds = Diagnostics::new();
             let tz = Tokenizer::from_parts(StringKey::EMPTY, input);
@@ -116,9 +92,9 @@ mod tests {
                 cache: &mut cache,
                 ds: &mut ds,
             };
-            let _ = parser.block_expr();
+            let _ = parse_fn(&mut parser);
             assert_eq!(TokenKind::Eof, *parser.tz.next());
-            assert!(!parser.ds.has_errors());
+            assert!(!parser.ds.has_errors(), "At input: {}", input);
         }
     }
 }

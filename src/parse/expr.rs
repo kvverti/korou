@@ -242,3 +242,44 @@ impl<'a> Parser<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::parse;
+
+    #[test]
+    fn valid_expressions_smoke() {
+        let exprs = [
+            "1",
+            "a",
+            "a.b",
+            "a.b.c",
+            "a::b",
+            "a::b.c",
+            "f()",
+            "a.f()",
+            "a::b.f()",
+            "a.f().b",
+            "f(1)",
+            "f(1, 2)",
+            "1 + 2",
+            "1 + 2 + 3",
+            "(1 + 2) * 3",
+            "f(1 + 2)",
+            "{}",
+            "{ a }",
+            "{ a; }",
+            "{ a + b }",
+            "{ {} }",
+            "{ {}; }",
+            "if 1 { 2 } else { 3 }",
+            "do { 1 }",
+            "{ x: Int, y: Int -> x + y }",
+            "return",
+            "continue",
+            "if 1 { 2 } else if 3 { 4 }",
+            "loop { func(); if cond { :break x; } }",
+        ];
+        parse::tests::smoke_template(&exprs, |p| p.block_expr());
+    }
+}

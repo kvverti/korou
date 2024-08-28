@@ -92,8 +92,36 @@ impl Parser<'_> {
                 break;
             }
         }
-        let mut base_effect = effect_seq.pop().expect("Effect loop is always run at least once.");
+        let mut base_effect = effect_seq
+            .pop()
+            .expect("Effect loop is always run at least once.");
         base_effect.meta_effects = effect_seq;
         base_effect
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parse;
+
+    #[test]
+    fn valid_types_smoke() {
+        let inputs = [
+            "Foo",
+            "Foo[Bar]",
+            "Foo[Bar, Baz]",
+            "() ->",
+            "() -> Unit",
+            "() -> Foo[Bar]",
+            "(Foo, Bar[Baz]) -> Quux",
+            "()/ef ->",
+            "{Foo}",
+            "{Foo[Bar]}",
+            "{Unit}/ef",
+            "()/ef, ef2, ef3 ->",
+            "()/ef, ef2 -> ()/ef3 ->",
+            "{() -> () -> {Unit}}",
+        ];
+        parse::tests::smoke_template(&inputs, |p| p.ty());
     }
 }

@@ -15,9 +15,9 @@ pub enum Expr {
     Ident(QualifiedIdent),
     /// Simple integer literal.
     Int(Integer),
-    /// Return literal.
+    /// The escape continuation for functions.
     Return,
-    /// The implicit continuation.
+    /// The implicit continuation (return for closures).
     Continue,
     /// A binary expression of a single operator
     Binary {
@@ -41,10 +41,12 @@ pub enum Expr {
         func: Box<Expr>,
         args: Vec<Expr>,
     },
+    /// Closure block, with or without parameters.
     Closure {
         params: Vec<TypedIdent>,
         stmts: Vec<Statement>,
     },
+    /// If-else ladder.
     Conditional {
         cases: Vec<Conditional>,
         /// may be empty
