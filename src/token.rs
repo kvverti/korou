@@ -106,18 +106,6 @@ impl TokenKind {
         Self::Star,
     ];
 
-    /// The token kinds that are definitely not the next token in a full expression.
-    pub const EXPR_SEPARATORS: &'static [Self] = &[
-        Self::Eof,
-        Self::Unrecognized,
-        Self::Arrow,
-        Self::Comma,
-        Self::CurlyR,
-        Self::RoundR,
-        Self::Semi,
-        Self::SquareR,
-    ];
-
     pub fn as_str(&self) -> &'static str {
         match *self {
             Self::Arrow => "->",

@@ -1,5 +1,3 @@
-use crate::span::Span;
-
 use super::QualifiedIdent;
 
 /// A type in the AST.
@@ -20,9 +18,6 @@ pub enum Type {
     Closure {
         ret: Box<Type>,
         effects: Vec<Effect>,
-    },
-    Error {
-        err_span: Span,
     },
 }
 

@@ -14,6 +14,7 @@
 //
 // Type format:
 // - TBD
+#![allow(dead_code)]
 
 use crate::symbol::SymbolKey;
 

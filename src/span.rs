@@ -13,11 +13,6 @@ pub struct Span {
 }
 
 impl Span {
-    /// Creates a span of no elements.
-    pub const fn new() -> Self {
-        Self { pos: 0, len: 0 }
-    }
-
     /// Extends this span to cover the range of the given span.
     pub fn expand(this: &mut Self, other: Self) {
         let pos = usize::min(this.pos, other.pos);

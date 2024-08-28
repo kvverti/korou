@@ -10,6 +10,7 @@ mod rules;
 /// Lazy tokenizer.
 #[derive(Debug)]
 pub struct Tokenizer<'a> {
+    #[allow(dead_code)] // we'll use this later
     file: StringKey,
     base: &'a str,
     src: &'a str,

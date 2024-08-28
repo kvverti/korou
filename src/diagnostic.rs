@@ -1,4 +1,5 @@
 //! Types relating to parser diagnostics.
+#![allow(dead_code)] // we'll use these later
 
 use crate::span::Span;
 

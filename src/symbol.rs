@@ -12,7 +12,7 @@
 //
 // Need: resolve_symbol(symbol_name, context_symbol_id)
 //       define_symbol(optional_symbol_name, context_symbol_id)
-
+#![allow(dead_code)]
 use crate::cache::StringKey;
 use std::collections::HashMap;
 
