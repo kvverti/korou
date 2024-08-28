@@ -87,25 +87,20 @@ impl<'a> Parser<'a> {
 
     /// Parses a binary expression: a sequence of free binary expressions separated by the same operator.
     pub fn binary_expr(&mut self) -> Expr {
-        const OPERATOR_TOKENS: &[TokenKind] = &[
-            TokenKind::Plus,
-            TokenKind::Minus,
-            TokenKind::Star,
-            TokenKind::Slash,
-        ];
         let expr = self.free_binary_expr();
-        let (_, Some(op_token)) = self.consume_one_of(OPERATOR_TOKENS).into_span_value() else {
+        let op_token = *self.tz.peek();
+        let Ok(op) = op_token.try_into() else {
+            // no binary operator
             return expr;
         };
+        self.advance();
         let rhs = self.free_binary_expr();
         let mut operands = vec![expr, rhs];
         while self.consume(op_token).is_some() {
             operands.push(self.free_binary_expr());
         }
         Expr::Binary {
-            op: op_token
-                .try_into()
-                .expect("Operator token is not an operator"),
+            op,
             operands,
         }
     }
