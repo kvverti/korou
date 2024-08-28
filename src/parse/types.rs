@@ -128,4 +128,17 @@ mod tests {
         ];
         parse::tests::smoke_template(&inputs, |p| p.ty());
     }
+
+    #[test]
+    fn valid_effects_smoke() {
+        let inputs = [
+            "foo",
+            "foo[Bar]",
+            "foo[()/bar ->]",
+            "foo bar",
+            "foo[A] bar[B]",
+            "foo bar baz",
+        ];
+        parse::tests::smoke_template(&inputs, |p| p.effect());
+    }
 }
