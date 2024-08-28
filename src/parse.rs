@@ -93,7 +93,7 @@ mod tests {
                 ds: &mut ds,
             };
             let _ = parse_fn(&mut parser);
-            assert_eq!(TokenKind::Eof, *parser.tz.next());
+            assert_eq!(TokenKind::Eof, *parser.tz.next(), "Failed to parse the entire input: {}", input);
             assert!(!parser.ds.has_errors(), "At input: {}", input);
         }
     }

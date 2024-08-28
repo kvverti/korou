@@ -47,9 +47,8 @@ pub enum TokenKind {
     Import,
     CC,
     Let,
-    Recur,
-    Resume,
     Return,
+    Unit,
     With,
     // Data-carrying
     Number,
@@ -69,9 +68,8 @@ impl TokenKind {
         Self::Import,
         Self::CC,
         Self::Let,
-        Self::Recur,
-        Self::Resume,
         Self::Return,
+        Self::Unit,
         Self::With,
     ];
 
@@ -143,9 +141,8 @@ impl TokenKind {
             Self::Import => "import",
             Self::CC => "continue",
             Self::Let => "let",
-            Self::Recur => "recur",
-            Self::Resume => "resume",
             Self::Return => "return",
+            Self::Unit => "Unit",
             Self::With => "with",
             Self::Ident => "<ident>",
             Self::Number => "<number>",

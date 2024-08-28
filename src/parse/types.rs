@@ -14,6 +14,10 @@ impl Parser<'_> {
     pub fn ty(&mut self) -> Type {
         let head_tkn = self.tz.peek();
         match *head_tkn {
+            TokenKind::Unit => {
+                self.advance();
+                Type::Unit
+            }
             TokenKind::CurlyL => {
                 // closure type
                 self.advance();
@@ -45,7 +49,7 @@ impl Parser<'_> {
                 // check for a return type
                 let ret = matches!(
                     *self.tz.peek(),
-                    TokenKind::Ident | TokenKind::CurlyL | TokenKind::RoundL
+                    TokenKind::Unit | TokenKind::Ident | TokenKind::CurlyL | TokenKind::RoundL
                 )
                 .then(|| Box::new(self.ty()));
                 Type::Continuation { args, ret, effects }

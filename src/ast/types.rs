@@ -3,6 +3,8 @@ use super::QualifiedIdent;
 /// A type in the AST.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Type {
+    /// The unit type.
+    Unit,
     /// A named (possibly generic) type.
     Simple {
         name: QualifiedIdent,
