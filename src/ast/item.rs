@@ -16,7 +16,7 @@ pub struct FunctionHeader {
     pub effect_params: Vec<Ident>,
     pub params: Vec<TypedIdent>,
     pub effects: Vec<Effect>,
-    pub ret: Option<Type>,
+    pub ret: Option<Vec<Type>>,
 }
 
 /// An item in the global or a namespace scope.

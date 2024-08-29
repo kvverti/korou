@@ -65,10 +65,8 @@ impl Parser<'_> {
             Vec::new()
         };
 
-        // return
         self.expect(TokenKind::Arrow);
-        let ret =
-            (!matches!(*self.tz.peek(), TokenKind::CurlyL | TokenKind::Semi)).then(|| self.ty());
+        let ret = self.fn_return_sequence();
 
         FunctionHeader {
             name,
@@ -80,12 +78,13 @@ impl Parser<'_> {
         }
     }
 
-    /// Parses a function - a function header followed by either a semicolon or a block.
+    /// Parses a function - a function header followed by either ; or = { block }.
     pub fn function(&mut self) -> Item {
         let header = self.function_header();
         if self.consume(TokenKind::Semi).is_some() {
             Item::AbstractFunction(header)
         } else {
+            self.expect(TokenKind::Equals);
             self.expect(TokenKind::CurlyL);
             let body = self.block_stmts();
             self.expect(TokenKind::CurlyR);
@@ -116,5 +115,28 @@ impl Parser<'_> {
         } else {
             (Vec::new(), Vec::new())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parse;
+
+    #[test]
+    fn valid_items_smoke() {
+        let inputs = [
+            "finally {}",
+            "fn foo() ->;",
+            "fn foo() -> ();",
+            "fn foo() -> () ->;",
+            "fn foo(x: A) -> (B) -> C;",
+            "fn foo(x: () ->) -> {};",
+            "fn foo[T, U | e]()/e -> (T, U);",
+            "fn foo() -> = {}",
+            "fn foo() -> {} = {}",
+            "fn foo() -> () = {}",
+        ];
+
+        parse::tests::smoke_template(&inputs, |p| p.item());
     }
 }

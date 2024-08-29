@@ -30,10 +30,6 @@ impl Parser<'_> {
             }
             TokenKind::RoundL => {
                 // continuation type
-                let mut arg_lists = Vec::new();
-                let ret_list;
-
-                // the first argument list
                 self.advance();
                 let args = combinators::comma_sequence(Self::ty, &[TokenKind::RoundR])(self);
                 self.expect(TokenKind::RoundR);
@@ -43,59 +39,8 @@ impl Parser<'_> {
                     Vec::new()
                 };
                 self.expect(TokenKind::Arrow);
-                arg_lists.push((args, effects));
-
-                // parse any chained continuation types
-                loop {
-                    let next_tkn = *self.tz.peek();
-                    if matches!(next_tkn, TokenKind::Ident | TokenKind::CurlyL) {
-                        // single return type, no more to parse
-                        ret_list = Some(vec![self.ty()]);
-                        break;
-                    }
-
-                    if self.consume(TokenKind::RoundL).is_none() {
-                        // no return type, no more to parse
-                        ret_list = None;
-                        break;
-                    }
-
-                    // multiple return types, possibly a single continuation return type - another argument list
-                    let args = combinators::comma_sequence(Self::ty, &[TokenKind::RoundR])(self);
-                    self.expect(TokenKind::RoundR);
-                    if self.consume(TokenKind::Slash).is_some() {
-                        // effects - must be followed by arrow
-                        let effects =
-                            combinators::comma_sequence(Self::effect, &[TokenKind::Arrow])(self);
-                        self.expect(TokenKind::Arrow);
-                        arg_lists.push((args, effects));
-                    } else if self.consume(TokenKind::Arrow).is_some() {
-                        // argument list for another continuation type
-                        arg_lists.push((args, Vec::new()));
-                    } else {
-                        // return type list
-                        ret_list = Some(args);
-                        break;
-                    }
-                }
-
-                // build the stack of continuations
-                let (args, effects) = arg_lists
-                    .pop()
-                    .expect("Continuation type has at least one argument list");
-                let mut ty = Type::Continuation {
-                    args,
-                    ret: ret_list,
-                    effects,
-                };
-                while let Some((args, effects)) = arg_lists.pop() {
-                    ty = Type::Continuation {
-                        args,
-                        ret: Some(vec![ty]),
-                        effects,
-                    };
-                }
-                ty
+                let ret = self.fn_return_sequence();
+                Type::Continuation { args, ret, effects }
             }
             _ => {
                 // simple type
@@ -113,6 +58,59 @@ impl Parser<'_> {
                 }
             }
         }
+    }
+
+    /// Parses the return types for a continuation type. This may be:
+    /// - one type
+    /// - multiple types in a parenthesized comma-separated list
+    /// - no type at all
+    /// Because continuation types begin with parentheses, this parse is recursive; e.g. () -> () ->
+    pub fn fn_return_sequence(&mut self) -> Option<Vec<Type>> {
+        let mut arg_lists = Vec::new();
+        let ret_list;
+
+        loop {
+            let next_tkn = *self.tz.peek();
+            if matches!(next_tkn, TokenKind::Ident | TokenKind::CurlyL) {
+                // single return type, no more to parse
+                ret_list = Some(vec![self.ty()]);
+                break;
+            }
+
+            if self.consume(TokenKind::RoundL).is_none() {
+                // no return type, no more to parse
+                ret_list = None;
+                break;
+            }
+
+            // multiple return types, possibly a single continuation return type - another argument list
+            let args = combinators::comma_sequence(Self::ty, &[TokenKind::RoundR])(self);
+            self.expect(TokenKind::RoundR);
+            if self.consume(TokenKind::Slash).is_some() {
+                // effects - must be followed by arrow
+                let effects = combinators::comma_sequence(Self::effect, &[TokenKind::Arrow])(self);
+                self.expect(TokenKind::Arrow);
+                arg_lists.push((args, effects));
+            } else if self.consume(TokenKind::Arrow).is_some() {
+                // argument list for another continuation type
+                arg_lists.push((args, Vec::new()));
+            } else {
+                // return type list
+                ret_list = Some(args);
+                break;
+            }
+        }
+
+        let mut ret_list = ret_list;
+        // if we parsed multiple args lists, the return type is a single continuation type
+        while let Some((args, effects)) = arg_lists.pop() {
+            ret_list = Some(vec![Type::Continuation {
+                args,
+                ret: ret_list,
+                effects,
+            }])
+        }
+        ret_list
     }
 
     /// Parses an effect.
@@ -171,6 +169,7 @@ mod tests {
             "() -> (Foo, Bar)",
             "() -> () ->",
             "() -> (() ->, Foo)",
+            "() -> (R)",
         ];
         parse::tests::smoke_template(&inputs, |p| p.ty());
     }
