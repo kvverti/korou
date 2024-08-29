@@ -3,8 +3,6 @@ use super::QualifiedIdent;
 /// A type in the AST.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Type {
-    /// The unit type.
-    Unit,
     /// A named (possibly generic) type.
     Simple {
         name: QualifiedIdent,
@@ -13,12 +11,12 @@ pub enum Type {
     /// A continuation type.
     Continuation {
         args: Vec<Type>,
-        ret: Option<Box<Type>>,
+        ret: Option<Vec<Type>>,
         effects: Vec<Effect>,
     },
     /// A closure type.
     Closure {
-        ret: Box<Type>,
+        ret: Vec<Type>,
         effects: Vec<Effect>,
     },
 }
