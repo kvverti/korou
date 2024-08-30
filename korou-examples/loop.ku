@@ -1,0 +1,20 @@
+
+effect break[R] {
+    fn break(v: R) ->;
+}
+
+fn infinite(code: {}) -> = {
+    code();
+    :infinite code;
+}
+
+fn loop[R](code: {}/break[R]) -> R = {
+    let ret: (R) -> = return;
+    do {
+        :infinite code;
+    } with handle break[R] {
+        fn break(v: R) -> = {
+            :ret v;
+        }
+    }
+}

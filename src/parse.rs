@@ -1,5 +1,6 @@
 //! The parser.
 
+use crate::ast::Item;
 use crate::cache::StringCache;
 use crate::diagnostic::{Code, Diagnostics};
 use crate::span::Spanned;
@@ -56,6 +57,15 @@ impl<'a> Parser<'a> {
     /// Advances the internal tokenizer, ignoring the next token.
     fn advance(&mut self) {
         self.tz.next();
+    }
+
+    /// Parse a single file. Might change later.
+    pub fn file(&mut self) -> Vec<Item> {
+        let mut items = Vec::new();
+        while *self.tz.peek() != TokenKind::Eof {
+            items.push(self.item());
+        }
+        items
     }
 }
 
