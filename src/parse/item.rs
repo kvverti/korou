@@ -33,6 +33,12 @@ impl Parser<'_> {
                     body,
                 }
             }
+            TokenKind::Import => {
+                self.advance();
+                let (_, module) = self.qualified_ident().into_span_value();
+                self.expect(TokenKind::Semi);
+                Item::Import { module }
+            }
             _ => {
                 self.advance();
                 Item::Error {

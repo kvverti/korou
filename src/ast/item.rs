@@ -1,4 +1,4 @@
-use super::{Effect, Ident, Statement, Type, TypedIdent};
+use super::{Effect, Ident, Statement, Type, TypedIdent, QualifiedIdent};
 use crate::span::Span;
 
 /// A concrete function.
@@ -32,6 +32,9 @@ pub enum Item {
         type_params: Vec<Ident>,
         effect_params: Vec<Ident>,
         body: Vec<Item>,
+    },
+    Import {
+        module: QualifiedIdent,
     },
     Error {
         err_span: Span,
